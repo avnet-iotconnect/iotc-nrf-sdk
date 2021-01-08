@@ -1,0 +1,8 @@
+# project files
+.idea
+.cproject
+.project
+
+# externally pullled repos
+cJSON
+iotc-c-lib

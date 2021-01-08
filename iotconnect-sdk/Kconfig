@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2020 Avnet
+#
+# IOTConnect Configuration
+#
+
+menu "IoTConnect SDK"
+
+config PROVISION_CERTIFICATES
+	bool "Provision of certificate"
+	help
+		Enable run-time provisioning of certificates from the
+		certificates header file selected by using CERTIFICATES_FILE
+    default false
+
+config PEER_VERIFY
+    int "Peer verify parameter for MQTT and API REST connections"
+    default 2
+    help
+        Set to 0 for VERIFY_NONE, 1 for VERIFY_OPTIONAL, and 2 for VERIFY_REQUIRED. See socket.h
+        Any value other than 2 may be a security risk and allow MITM attacks.
+        You can temporarily circumvent some certificate issues by setting this to a value other than 2
+
+config MQTT_BROKER_PORT
+	int "MQTT broker port"
+	default 8883
+    help
+        The value should be left default, unless instructed differently by your IoTConnect representative.
+
+config DISCOVERY_HOSTNAME
+    string "Host to use for IoTConnect discovery"
+    default "discovery.iotconnect.io"
+    help
+        The value should be left default, unless instructed differently by your IoTConnect representative.
+
+endmenu
+

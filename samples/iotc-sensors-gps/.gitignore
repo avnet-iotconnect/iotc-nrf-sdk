@@ -1,0 +1,11 @@
+#project files
+.idea
+.cproject
+.project
+
+#build driecttories
+cmake-build-*/
+build*/
+
+# cJSON will be pulled
+cJSON

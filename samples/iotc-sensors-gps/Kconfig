@@ -1,0 +1,68 @@
+#
+# Copyright (c) 2020 Avnet
+#
+# Sample app config
+#
+
+menu "IoTConnect Sample"
+
+config PROVISION_TEST_CERTIFICATES
+	bool "Provision test certificates with source"
+	help
+		Enabling this option will trigger the mechanism to program the test certs and keys
+		a set of devices
+	default false
+
+config IOTCONNECT_CPID
+	string "IoTConnect Company ID"
+	help
+		Settings -> Company Profile. Usually a long hex string like ABCDEF123456789A...
+	default ""
+
+config IOTCONNECT_ENV
+    string "IoTConnect Environment"
+	help
+		Environment name. Contact your representative for details.
+	default ""
+
+config TELEMETRY_SEND_INTERVAL_SECS
+	int "How many seconds to back off before sending telemetry"
+	help
+		A shorter interval means that data is sent more often and that it uses more bandwidth.
+	default 5
+
+config TELEMETRY_DURATION_MINUTES
+	int "How many minutes to keep sending telemetry"
+	help
+		This value is used to limit the amount of data we send to the cloud and avoid sim card charges during testing.
+		After the period exires, the board will disconnect from the cloud.
+		You can set this value to a negative number if you wish to send data indefinitely.
+	default 5
+
+config MAIN_LOOP_INTERVAL_MS
+	int "How many milliseconds to wait before returning to main loop"
+	help
+	    The main loop will execute iotconnect loop and allow mqtt to send/receive data.
+	    Shorter loop interval means that we receive events from the cloud quciker.
+	    Longer loop interval may cause mqtt connection to time out. It should not be more than several seconds.
+	default 100
+
+menuconfig THINGY_SENSORS
+	select SENSOR
+	bool "Enable thingy Sensors"
+	select BH1749 if BOARD_THINGY91_NRF9160NS
+	default y if BOARD_THINGY91_NRF9160NS
+	select BME680 if BOARD_THINGY91_NRF9160NS
+	select ADXL362 if BOARD_THINGY91_NRF9160NS
+	select PWM if BOARD_THINGY91_NRF9160NS
+	select PWM_0 if BOARD_THINGY91_NRF9160NS
+
+
+endmenu
+
+rsource "../../iotconnect-sdk/Kconfig"
+
+menu "Zephyr Kernel"
+source "$ZEPHYR_BASE/Kconfig.zephyr"
+
+endmenu

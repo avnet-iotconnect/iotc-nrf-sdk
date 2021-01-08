@@ -1,0 +1,66 @@
+name: Default
+
+# Controls when the action will run. 
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NCS_ROOT: "${{ github.workspace }}/ncs"
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: nRF SDK Setup
+        run: sudo iotconnect-sdk-nrf/scripts/setup-machine.sh
+
+      - name: nRF SDK Setup
+        run: iotconnect-sdk-nrf/scripts/setup-sdk.sh
+
+      - name: Pull Dependencies
+        run: |
+          cd iotconnect-sdk-nrf/iotconnect-sdk-sample &&
+          bash -x ./pull-cjson-lib.sh &&
+          cd ../iotconnect-sdk-sample-gps &&
+          bash -x ./pull-cjson-lib.sh
+
+      - name: Build the Default Sample Project
+        env:
+          NRF_SAMPLE_CPID: ${{ secrets.NRF_SAMPLE_CPID }}
+          NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
+        working-directory:
+        run: |
+          cd iotconnect-sdk-nrf/iotconnect-sdk-sample &&
+          ../scripts/build-project.sh
+
+      - name: Build the GPS Sample
+        env:
+          NRF_SAMPLE_CPID: ${{ secrets.NRF_SAMPLE_CPID }}
+          NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
+        working-directory:
+        run: |
+          cd iotconnect-sdk-nrf/iotconnect-sdk-sample-gps &&
+          ../scripts/build-project.sh
+
+      - name: Publish Sample Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: nrf-sample
+          path: |
+            iotconnect-sdk-nrf/iotconnect-sdk-sample/build/zephyr/merged.hex
+            iotconnect-sdk-nrf/iotconnect-sdk-sample/build/zephyr/app_signed.hex
+            iotconnect-sdk-nrf/iotconnect-sdk-sample/build/zephyr/app_update.bin
+
+      - name: Publish GPS Sample Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: nrf-gps-sample
+          path: |
+            iotconnect-sdk-nrf/iotconnect-sdk-sample-gps/build/zephyr/merged.hex
+            iotconnect-sdk-nrf/iotconnect-sdk-sample-gps/build/zephyr/app_signed.hex
+            iotconnect-sdk-nrf/iotconnect-sdk-sample-gps/build/zephyr/app_update.bin
+
