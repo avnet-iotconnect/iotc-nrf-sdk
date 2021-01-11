@@ -16,10 +16,10 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: nRF SDK Setup
-        run: sudo iotconnect-sdk-nrf/scripts/setup-machine.sh
+        run: sudo scripts/setup-machine.sh
 
       - name: nRF SDK Setup
-        run: iotconnect-sdk-nrf/scripts/setup-sdk.sh
+        run: scripts/setup-sdk.sh
 
       - name: Pull Dependencies
         run: |
