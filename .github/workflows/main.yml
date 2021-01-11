@@ -24,7 +24,7 @@ jobs:
       - name: Pull Dependencies
         run: |
           bash -x scripts/pull-cjson-lib.sh &&
-          bash -x scripts/setup-iotc-c-sdk.sh
+          bash -x scripts/setup-iotc-c-lib.sh
 
       - name: Build the Basic Sample Project
         run: |
