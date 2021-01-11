@@ -659,8 +659,7 @@ void main(void) {
     const char *imei = nrf_modem_get_imei();
 
     if (!imei) {
-        // can't go on from here
-        // change this section if using static device id
+        printk("Unable to obtain IMEI from the board!\n");
         return;
     }
 
@@ -680,6 +679,7 @@ void main(void) {
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);
+    printk("DUID: %s\n", duid);
 
     light_sensor_init();
     env_sensors_init();

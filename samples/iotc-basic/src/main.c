@@ -410,24 +410,28 @@ void main(void) {
 
     const char *imei = nrf_modem_get_imei();
 
-    if (imei) {
-#if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
-        /*
-        if(NrfCertStore_DeleteAllDeviceCerts()) {
-            printk("Failed to delete device certs\n");
-        } else {
-            printk("Device certs deleted\n");
-        }
-         */
-        if (program_test_certs(env, imei)) {
-            printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
-        } else {
-            printk("Device provisioned successfully\n");
-        }
-#endif
-        strcpy(duid, "nrf-");
-        strcat(duid, imei);
+    if (!imei) {
+        printk("Unable to obtain IMEI from the board!\n");
+        return;
     }
+
+#if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
+    /*
+    if(NrfCertStore_DeleteAllDeviceCerts()) {
+        printk("Failed to delete device certs\n");
+    } else {
+        printk("Device certs deleted\n");
+    }
+     */
+    if (program_test_certs(env, imei)) {
+        printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
+    } else {
+        printk("Device provisioned successfully\n");
+    }
+#endif
+    strcpy(duid, "nrf-");
+    strcat(duid, imei);
+    printk("DUID: %s\n", duid);
 
     dk_buttons_init(button_handler);
 
