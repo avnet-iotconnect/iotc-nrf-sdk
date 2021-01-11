@@ -74,8 +74,8 @@ You can interrupt it by pressing the middle button. Pressing the button again wi
 The iotc-sensors-gps sample will trigger obtaining the GPS location when the Thingy91 button is long-pressed. It will 
 stay in this mode until the GPS fix is obtained or until the button is pressed again. 
 
-You can increase the APP_VERSION number, rebuild the app, upload app_signed.bin into IoTConnect and push an OTA to 
-your board. The board will update itself if the new version is greater (string comparison) 
+You can increase the MAIN_APP_VERSION number, rebuild the app, upload app_signed.bin into IoTConnect and push an 
+OTA to your board. The board will update itself if the new version is greater (string comparison) 
 than the currently running version. 
 
 ### Other Things to Note
