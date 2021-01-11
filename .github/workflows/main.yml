@@ -23,44 +23,37 @@ jobs:
 
       - name: Pull Dependencies
         run: |
-          cd iotconnect-sdk-nrf/iotconnect-sdk-sample &&
-          bash -x ./pull-cjson-lib.sh &&
-          cd ../iotconnect-sdk-sample-gps &&
-          bash -x ./pull-cjson-lib.sh
+          bash -x scripts/pull-cjson-lib.sh &&
+          bash -x scripts/setup-iotc-c-sdk.sh
 
-      - name: Build the Default Sample Project
+      - name: Build the Basic Sample Project
+        run: |
+          cd samples/iotc-basic &&
+          ../../scripts/build-project.sh
+
+      - name: Build the Sensors and GPS Sample
         env:
           NRF_SAMPLE_CPID: ${{ secrets.NRF_SAMPLE_CPID }}
           NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
-        working-directory:
         run: |
-          cd iotconnect-sdk-nrf/iotconnect-sdk-sample &&
-          ../scripts/build-project.sh
-
-      - name: Build the GPS Sample
-        env:
-          NRF_SAMPLE_CPID: ${{ secrets.NRF_SAMPLE_CPID }}
-          NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
-        working-directory:
-        run: |
-          cd iotconnect-sdk-nrf/iotconnect-sdk-sample-gps &&
-          ../scripts/build-project.sh
+          cd samples/iotc-sensors-gps &&
+          ../../scripts/build-project.sh
 
       - name: Publish Sample Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: nrf-sample
           path: |
-            iotconnect-sdk-nrf/iotconnect-sdk-sample/build/zephyr/merged.hex
-            iotconnect-sdk-nrf/iotconnect-sdk-sample/build/zephyr/app_signed.hex
-            iotconnect-sdk-nrf/iotconnect-sdk-sample/build/zephyr/app_update.bin
+            samples/iotc-basic/build/zephyr/merged.hex
+            samples/iotc-basic/build/zephyr/app_signed.hex
+            samples/iotc-basic/build/zephyr/app_update.bin
 
       - name: Publish GPS Sample Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: nrf-gps-sample
           path: |
-            iotconnect-sdk-nrf/iotconnect-sdk-sample-gps/build/zephyr/merged.hex
-            iotconnect-sdk-nrf/iotconnect-sdk-sample-gps/build/zephyr/app_signed.hex
-            iotconnect-sdk-nrf/iotconnect-sdk-sample-gps/build/zephyr/app_update.bin
+            samples/iotc-sensors-gps/build/zephyr/merged.hex
+            samples/iotc-sensors-gps/build/zephyr/app_signed.hex
+            samples/iotc-sensors-gps/build/zephyr/app_update.bin
 
