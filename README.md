@@ -23,8 +23,8 @@ The default implementation of the gettimeofday in the nRF SDK needs to be declar
 to have proper time integration.
 * Open the project using the Segger Embedded Studio with *File->Open nRF Connect SDK Project* using:
   * CmakeLists.txt from one of the samples
-  * Board Directory: for DK: <NCS_ROOT>/zephyr/boards/arm/nrf9160dk_nrf9160, 
-  for Thingy91: <NCS_ROOT>/nrf/boards/arm/thingy91_nrf9160
+  * Board Directory: for DK: **NCS_ROOT**/zephyr/boards/arm/nrf9160dk_nrf9160, 
+  for Thingy91: **NCS_ROOT**/nrf/boards/arm/thingy91_nrf9160
   * Board Name: nrf9160dk_nrf9160ns or thingy91_nrf9160ns, for DK or Thingy91 respectively
 * Configure the project with *Project->Configure nRF SDK Project*
   * Select *menuconfig*
@@ -58,8 +58,8 @@ telemetry field "cpu". For the nrf-sensors-gps sample, see the values in the pub
 * Follow the instructions displayed at the top of the window to bring the modem into offline mode with AT+CFUN=4.
 * Copy and paste the contents of the following certificates (including the BEGIN and END lines):
   * CA Certificate: BaltimoreCyberTrustRoot.crt.pem
-  * Client Certificate: the generated nrf-<IMEI>>-crt.pem
-  * Private Key: the generated nrf-<IMEI>-key.pem
+  * Client Certificate: the generated nrf-**YourIMEI**-crt.pem
+  * Private Key: the generated nrf-**YourIMEI**-key.pem
 * Enter 10701 into the Security Tag field.
 * Click the Update Certificates button in the bottom right of the window.
 
@@ -86,3 +86,15 @@ MCUBOOT when you have the default asset tracker programmed onto the board.
 This file needs to match the asset_tracker's configuration in order for OTA to work. If you intend to use the code
 by programming all of the the boards with JTAG, these files are not needed.
 
+### AGPS Support
+
+There is support for AGPS support on the gps-support branch in this repo.
+
+Because of antenna sharing between LTE and GPS, AGPS has to be used in LTE+GPS mode 
+(rather than exclusive modes, which is the current model). This may cause slight perfromance
+degfreadataion and unknown behavior with some carrier DRX mode support etc. For those reasons, 
+the prototype AGPS code is currently on a separate branch and may not support all future enhancements.
+
+In order to build this demo on the gsp-support branch, ensure that download the SUPL library from 
+NRF 9160 web page and agree to its license. Enable SUPL_CLIENT_LIB and AGPS in KConfig
+and compile the gps demo.
