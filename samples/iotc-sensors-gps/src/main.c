@@ -524,23 +524,7 @@ static void gps_evt_handler(const struct device *dev, struct gps_event *evt) {
             break;
         case GPS_EVT_AGPS_DATA_NEEDED:
             printk("GPS_EVT_AGPS_DATA_NEEDED\n");
-            /* Send A-GPS request with short delay to avoid LTE network-
-             * dependent corner-case where the request would not be sent.
-             */
-            // AGPS code here.
-            /*
-            static struct gps_agps_request agps_request;
-            memcpy(&agps_request, &evt->agps_request, sizeof(agps_request));
-            lte_lc_system_mode_set(default_system_mode); // mixed with gps
-            int err = gps_agps_request(agps_request, GPS_SOCKET_NOT_PROVIDED);
-            if (err) {
-                printk("AGPS could not be requested\n");
-            } else {
-                printk("AGPS request success\n");
-            }
-            lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS);
-            */
-
+            submit_agps_request(&evt->agps_request, default_system_mode);
             break;
         case GPS_EVT_ERROR:
             printk("GPS_EVT_ERROR\n");
@@ -564,9 +548,11 @@ static void gps_handler() {
 
 static int setup_modem_gps(void) {
     printk("turn on modem to GPS mode\n");
+    /*
     lte_lc_offline();
     lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS);
-    lte_lc_normal();
+     */
+    lte_lc_connect();
     return 0;
 }
 
@@ -694,7 +680,9 @@ void main(void) {
             gps_control_stop();
             gps_running = false;
             lte_lc_offline();
+            /*
             lte_lc_system_mode_set(default_system_mode);
+             */
         }
         if (sdk_do_run && !sdk_running) {
             sdk_do_run = false;

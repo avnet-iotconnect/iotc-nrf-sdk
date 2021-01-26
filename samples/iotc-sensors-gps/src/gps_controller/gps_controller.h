@@ -13,6 +13,8 @@
 #define GPS_CONTROLLER_H__
 
 #include <zephyr.h>
+#include <modem/lte_lc.h>
+#include <drivers/gps.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +22,11 @@ extern "C" {
 
 int gps_control_init(gps_event_handler_t handler);
 
-void gps_control_stop(void);
-
 void gps_control_start(void);
+
+void submit_agps_request(struct gps_agps_request *agps_request_ptr, enum lte_lc_system_mode online_system_mode_);
+
+void gps_control_stop(void);
 
 #ifdef __cplusplus
 }
