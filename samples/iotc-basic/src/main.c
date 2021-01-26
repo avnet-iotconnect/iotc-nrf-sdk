@@ -205,7 +205,7 @@ static void on_connection_status(IOT_CONNECT_STATUS status) {
 #endif
             break;
         case MQTT_DISCONNECTED:
-            printk("IoTConnect MQTT Disonnected\n");
+            printk("IoTConnect MQTT Disconnected\n");
             ui_led_set_rgb(LED_MAX, 0, 0);
             break;
         case MQTT_FAILED:
