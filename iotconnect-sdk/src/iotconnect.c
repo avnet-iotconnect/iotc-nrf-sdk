@@ -157,7 +157,7 @@ static IOTCL_DiscoveryResponse *run_http_discovery(const char *cpid, const char 
         goto clean_up;
     }
 
-    ret = IOTC_DiscoveryParseDiscoveryResponse(json_start);
+    ret = IOTCL_DiscoveryParseDiscoveryResponse(json_start);
     // fall through
     clean_up:
     if (fd >= 0) {
@@ -358,7 +358,7 @@ IOTCL_CONFIG *IotConnectSdk_GetLibConfig() {
     return IOTCL_GetConfig();
 }
 
-IOTCONNECT_CLIENT_CONFIG *IotConnectSdk_GetConfig() {
+IOTCONNECT_CLIENT_CONFIG *IotConnectSdk_InitAndGetConfig() {
     memset(&config, 0, sizeof(config));
     return &config;
 }

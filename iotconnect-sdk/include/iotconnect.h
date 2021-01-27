@@ -47,7 +47,7 @@ typedef struct {
 } IOTCONNECT_CLIENT_CONFIG;
 
 
-IOTCONNECT_CLIENT_CONFIG *IotConnectSdk_GetConfig();
+IOTCONNECT_CLIENT_CONFIG *IotConnectSdk_InitAndGetConfig();
 
 int IotConnectSdk_Init();
 

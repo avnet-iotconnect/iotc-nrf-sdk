@@ -345,7 +345,7 @@ static int sdk_run() {
         return -EINVAL;
     }
 
-    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_GetConfig();
+    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
     config->cpid = cpid;
     config->duid = duid;
     config->env = env;
