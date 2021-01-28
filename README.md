@@ -42,7 +42,7 @@ In order to use the SDK in your own project, ensure that version of cJSON requir
 IoTConnect C Library is included in your build. Also follow the instructions above to 
 modify gettimeofday function so that the SDK can can use time properly.
 
-Also ensure that your main obtains the current time before telemetry messages are sent.
+Ensure that your application obtains and sets the current time before telemetry messages are sent.
 
 In your CMakeLists.txt include the iotconnect-sdk library from this repo.
 
