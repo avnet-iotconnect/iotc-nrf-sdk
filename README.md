@@ -36,7 +36,7 @@ you can follow the steps in .github/workflows/main.yml and run appropriate scrip
 
 ### Integrating the SDK Into your own project.
 
-The samples should contain most of the code that you can re-user and dd to your application. 
+The samples should contain most of the code that you can re-use and add to your application. 
 
 In order to use the SDK in your own project, ensure that version of cJSON required by the 
 IoTConnect C Library is included in your build. Also follow the instructions above to 
