@@ -5,17 +5,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <net/socket.h>
 #include <cJSON.h>
 
-#include <net/mqtt.h>
-#include <net/http_client.h>
 #include <zephyr.h>
+#include <iotconnect_socket_https.h>
 
 #include "nrf_cert_store.h"
+#include "iotconnect_socket_https.h"
 
 // override IOTCONNECT_DISCOVERY_HOSTNAME BEFORE including any iotconnect includes in case the user overrides it in config
 #define IOTCONNECT_DISCOVERY_HOSTNAME CONFIG_DISCOVERY_HOSTNAME
+
 #include "iotconnect_discovery.h"
 #include "iotconnect_event.h"
 
@@ -32,15 +32,14 @@ static IOTCONNECT_CLIENT_CONFIG config = {0};
 static IOTCL_CONFIG lib_config = {0};;
 static IOTCONNECT_MQTT_CONFIG mqtt_config = {0};
 
-static char recv_buf[MAXLINE+1];
-static char send_buf[MAXLINE+1];
+static char send_buf[MAXLINE + 1];
 
-static void report_sync_error(IOTCL_SyncResponse *response, const char* sync_response_str) {
+static void report_sync_error(IOTCL_SyncResponse *response, const char *sync_response_str) {
     if (NULL == response) {
-        printk("IOTC_SyncResponse is NULL. Out of memory?\n");
+        printk("Failed to obtain sync response?\n");
         return;
     }
-    switch(response->ds) {
+    switch (response->ds) {
         case IOTCL_SR_DEVICE_NOT_REGISTERED:
             printk("IOTC_SyncResponse error: Not registered\n");
             break;
@@ -77,143 +76,46 @@ static void report_sync_error(IOTCL_SyncResponse *response, const char* sync_res
 
 static IOTCL_DiscoveryResponse *run_http_discovery(const char *cpid, const char *env) {
     IOTCL_DiscoveryResponse *ret = NULL;
-    int err;
-    int fd = -1;
 
-    struct addrinfo *res = NULL;
-    struct addrinfo hints = {
-            .ai_family = AF_INET,
-            .ai_socktype = SOCK_STREAM,
-    };
-
-    err = getaddrinfo(CONFIG_DISCOVERY_HOSTNAME, NULL, &hints, &res);
-    if (err) {
-        printk("Unable to resolve host\n");
-        goto clean_up;
-    }
-
-    ((struct sockaddr_in *) res->ai_addr)->sin_port = htons(HTTPS_PORT);
-
-    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TLS_1_2);
-
-    if (fd < 0) {
-        printk("Failed to open socket!\n");
-        goto clean_up;
-    }
-
-    err = NrfCertStore_ConfigureApiFd(fd);
-    if (err) {
-        goto clean_up;
-    }
-    struct sockaddr_in * a = (struct sockaddr_in *)(res->ai_addr);
-    printk("Connecting to %s %d.%d.%d.%d ... ", CONFIG_DISCOVERY_HOSTNAME,
-           a->sin_addr.s4_addr[0],
-           a->sin_addr.s4_addr[1],
-           a->sin_addr.s4_addr[2],
-           a->sin_addr.s4_addr[3]
-            );
-    err = connect(fd, res->ai_addr, sizeof(struct sockaddr_in));
-    if (err) {
-        printk("connect() failed, err: %d\n", errno);
-        goto clean_up;
-    }
-    printk("OK\n");
     int HTTP_HEAD_LEN = snprintk(send_buf,
                                  MAXLINE, /*total length should not exceed MTU size*/
-                                 IOTCONNECT_DISCOVERY_HEADER_TEMPLATE, cpid, env
+    IOTCONNECT_DISCOVERY_HEADER_TEMPLATE, cpid, env
+    );
+    send_buf[HTTP_HEAD_LEN] = 0;
+    IOTCONNECT_NRF_HTTP_RESPONSE response;
+    iotconnect_https_request(&response,
+                             IOTCONNECT_DISCOVERY_HOSTNAME,
+                             TLS_SEC_TAG_IOTCONNECT_API,
+                             send_buf
     );
 
-    int bytes;
-    size_t off = 0;
-    do {
-        bytes = send(fd, &send_buf[off], HTTP_HEAD_LEN - off, 0);
-        if (bytes < 0) {
-            printk("send() failed, err %d\n", errno);
-            goto clean_up;
-        }
-        off += bytes;
-    } while (off < HTTP_HEAD_LEN);
-
-    off = 0;
-    do {
-        bytes = recv(fd, &recv_buf[off], MAXLINE - off, 0);
-        if (bytes < 0) {
-            printk("recv() failed, err %d\n", errno);
-            goto clean_up;
-        }
-        off += bytes;
-    } while (bytes != 0);
-
-    recv_buf[off] = 0;
-
-    if (off == 0) {
-        printk("Got empty response from server\n");
-        goto clean_up;
+    if (NULL == response.data) {
+        printk("Unable to parse HTTP response. Response was:\n----\n%s\n----\n", response.raw_response);
+        goto cleanup;
     }
-
-    char *json_start = strstr(recv_buf, "\r\n{");
+    char *json_start = strstr(response.data, "{");
     if (NULL == json_start) {
-        printk("No json response from server. Response was:\n----\n%s\n----\n", recv_buf);
-        goto clean_up;
+        printk("No json response from server. Response was:\n----\n%s\n----\n", response.raw_response);
+        goto cleanup;
+    }
+    if (json_start != response.data) {
+        printk("WARN: Expected JSON to start immediately in the returned data. Response was:\n----\n%s\n----\n",
+               response.raw_response);
     }
 
     ret = IOTCL_DiscoveryParseDiscoveryResponse(json_start);
+
+
+cleanup:
+    iotconnect_free_https_response(&response);
     // fall through
-    clean_up:
-    if (fd >= 0) {
-        close(fd);
-    }
-    freeaddrinfo(res);
     return ret;
+
+
 }
 
-static char *run_http_sync(const char *cpid, const char *uniqueid) {
-    char *sync_resp = NULL;
-    struct addrinfo *res = NULL;
-    int err;
-    int fd = -1;
-    size_t off;
-
-    //printk("host:%s path:%s\n", host, path);
-
-    struct addrinfo hints = {
-            .ai_family = AF_INET,
-            .ai_socktype = SOCK_STREAM,
-    };
-    err = getaddrinfo(discovery_response->host, NULL, &hints, &res);
-    if (err) {
-        printk("Unable to resolve host");
-        goto clean_up;
-    }
-
-    ((struct sockaddr_in *) res->ai_addr)->sin_port = htons(HTTPS_PORT);
-
-    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TLS_1_2);
-
-    if (fd == -1) {
-        printk("Failed to open socket!\n");
-        goto clean_up;
-    }
-
-    err = NrfCertStore_ConfigureApiFd(fd);
-    if (err) {
-        goto clean_up;
-    }
-
-    struct sockaddr_in * a = (struct sockaddr_in *)(res->ai_addr);
-    printk("Connecting to %s %d.%d.%d.%d ... ", discovery_response->host,
-           a->sin_addr.s4_addr[0],
-           a->sin_addr.s4_addr[1],
-           a->sin_addr.s4_addr[2],
-           a->sin_addr.s4_addr[3]
-    );
-
-    err = connect(fd, res->ai_addr, sizeof(struct sockaddr_in));
-    if (err) {
-        printk("connect() failed, err: %d\n", errno);
-        goto clean_up;
-    }
-    printk("OK\n");
+static IOTCL_SyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
+    IOTCL_SyncResponse *ret = NULL;
     char post_data[IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_MAX_LEN + 1] = {0};
     snprintk(post_data,
              IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_MAX_LEN, /*total length should not exceed MTU size*/
@@ -227,59 +129,39 @@ static char *run_http_sync(const char *cpid, const char *uniqueid) {
                                  IOTCONNECT_SYNC_HEADER_TEMPLATE, discovery_response->path, discovery_response->host,
                                  strlen(post_data), post_data
     );
-    off = 0;  //
-    //printk("send_buf: %s\n", send_buf);
-    do {
-        int bytes = send(fd, &send_buf[off], HTTP_POST_LEN - off, 0);
-        if (bytes < 0) {
-            printk("send() failed, err %d\n", errno);
-            goto clean_up;
-        }
-        off += bytes;
-    } while (off < HTTP_POST_LEN);
+    send_buf[HTTP_POST_LEN] = 0;
+    IOTCONNECT_NRF_HTTP_RESPONSE response;
+    iotconnect_https_request(&response,
+                             discovery_response->host,
+                             TLS_SEC_TAG_IOTCONNECT_API,
+                             send_buf
+    );
 
-    //printk("buffer sent!\n");
-
-    off = 0;
-    int bytes;
-    do {
-        bytes = recv(fd, &recv_buf[off], MAXLINE - off, 0);
-        if (bytes < 0) {
-            printk("recv() failed, err %d\n", errno);
-            goto clean_up;
-        }
-        off += bytes;
-        //printk("got %d bytes\n", bytes);
-    } while (bytes != 0 /* peer closed connection */);
-    recv_buf[off] = 0;
-    //printk("Sync response: %s", recv_buf);
-    //sync_resp = strstr(recv_buf, "\r\n{");
-
-    if (off == 0) {
-        printk("Got empty response from server\n");
-        goto clean_up;
+    if (NULL == response.data) {
+        printk("Unable to parse HTTP response. Response was:\n----\n%s\n----\n", response.raw_response);
+        goto cleanup;
     }
-
-    char *json_start = strstr(recv_buf, "\r\n{");
+    char *json_start = strstr(response.data, "{");
     if (NULL == json_start) {
-        printk("No json response from server. Response was:\n----\n%s\n----\n", recv_buf);
-        goto clean_up;
+        printk("No json response from server. Response was:\n----\n%s\n----\n", response.raw_response);
+        goto cleanup;
+    }
+    if (json_start != response.data) {
+        printk("WARN: Expected JSON to start immediately in the returned data. Response was:\n----\n%s\n----\n",
+               response.raw_response);
     }
 
-    freeaddrinfo(res);
-    close(fd);
-    return json_start;
+    ret = IOTCL_DiscoveryParseSyncResponse(json_start);
+    if (!ret || ret->ds != IOTCL_SR_OK) {
+        report_sync_error(ret, response.raw_response);
+        IOTCL_DiscoveryFreeSyncResponse(ret);
+    }
 
+    cleanup:
+    iotconnect_free_https_response(&response);
     // fall through
-    clean_up:
-    if (res) {
-        freeaddrinfo(res);
-    }
-    if (fd >= 0) {
-        close(fd);
-    }
 
-    return sync_resp;
+    return ret;
 }
 
 // this function will Give you Device CallBack payload
@@ -324,18 +206,10 @@ static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type
     switch (type) {
         case ON_FORCE_SYNC:
             IotConnectSdk_Disconnect();
-            char *sync_resp_str = run_http_sync(config.cpid, config.duid);
-            if (NULL == sync_resp_str) {
+            sync_response = run_http_sync(config.cpid, config.duid);
+            if (NULL == sync_response) {
                 printk("Failed to initialize the SDK\n");
                 break;
-            }
-            sync_response = IOTCL_DiscoveryParseSyncResponse(sync_resp_str);
-            if (!sync_response || sync_response->ds != IOTCL_SR_OK) {
-                report_sync_error(sync_response, sync_resp_str);
-                IOTCL_DiscoveryFreeSyncResponse(sync_response);
-                sync_response = NULL;
-                free(sync_resp_str);
-                return;
             }
             (void) iotc_nrf_mqtt_init(&mqtt_config, sync_response);
         case ON_CLOSE:
@@ -376,19 +250,10 @@ int IotConnectSdk_Init() {
         return -1;
     }
 
-    char *sync_resp_str = run_http_sync(config.cpid, config.duid);
-    if (NULL == sync_resp_str) {
+    sync_response = run_http_sync(config.cpid, config.duid);
+    if (NULL == sync_response) {
         // Sync_call will print the error
         return -2;
-    }
-
-    sync_response = IOTCL_DiscoveryParseSyncResponse(sync_resp_str);
-    if (!sync_response || sync_response->ds != IOTCL_SR_OK) {
-        report_sync_error(sync_response, sync_resp_str);
-        IOTCL_DiscoveryFreeSyncResponse(sync_response);
-        sync_response = NULL;
-        free(sync_resp_str);
-        return -3;
     }
 
     // We want to print only first 4 characters of cpid. %.4s doesn't seem to work with prink

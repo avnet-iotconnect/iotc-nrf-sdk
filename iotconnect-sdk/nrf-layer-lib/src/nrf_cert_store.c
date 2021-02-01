@@ -2,7 +2,6 @@
 #include <string.h>
 #include <zephyr.h>
 #include <net/socket.h>
-#include <net/tls_credentials.h>
 #include <modem/modem_key_mgmt.h>
 
 #include "iotconnect_certs_cloud_svcs.h"
@@ -20,12 +19,16 @@ void NrfCertStore_ConfigureTls(struct mqtt_sec_config *tls_config) {
 
 ///////////////////////////////////////////////////////////////////////////////////
 /* Setup TLS options on a given socket */
-int NrfCertStore_ConfigureApiFd(int fd) {
+
+
+///////////////////////////////////////////////////////////////////////////////////
+/* Setup TLS options on a given socket */
+int NrfCertStore_ConfigureHttpsFd(sec_tag_t sec_tag, int fd) {
     int err;
     int verify;
 
     const sec_tag_t tls_sec_tag[] = {
-            TLS_SEC_TAG_IOTCONNECT_API,
+            sec_tag,
     };
 
     verify = CONFIG_PEER_VERIFY;
@@ -43,6 +46,11 @@ int NrfCertStore_ConfigureApiFd(int fd) {
     }
 
     return err;
+}
+
+
+int NrfCertStore_ConfigureApiFd(int fd) {
+    return NrfCertStore_ConfigureHttpsFd(TLS_SEC_TAG_IOTCONNECT_API, fd);
 }
 
 static int provision_ca_cert_if_no_exists(int sec_tag, char* cert) {

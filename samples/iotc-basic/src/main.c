@@ -33,7 +33,7 @@
 #endif
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.00.01" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.01.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 #define LED_MAX 20U
 
 static char duid[30] = "nrf-dk-test"; // When using this code, your device ID will be nrf-IMEI.
