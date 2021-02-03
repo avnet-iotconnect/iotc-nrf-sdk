@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <net/socket.h>
+#include <nrf_socket.h>
 #include "nrf_cert_store.h"
 #include "iotconnect_socket_https.h"
 
@@ -19,8 +20,8 @@
 
 
 static int parse_response(IOTCONNECT_NRF_HTTP_RESPONSE *response,
-                           char *recv_buff,
-                           size_t recv_buff_len
+                          char *recv_buff,
+                          size_t recv_buff_len
 ) {
     char *header_end = strstr(recv_buff, "\r\n\r\n"); // end of headers has 2 newlines
     if (!header_end) {
@@ -28,18 +29,18 @@ static int parse_response(IOTCONNECT_NRF_HTTP_RESPONSE *response,
         return -1;
     }
     size_t header_size = header_end - recv_buff;
-    response->header = (char*)malloc(header_size + 1);
-    response->data = (char*)malloc(recv_buff_len - header_size + 1);
+    response->header = (char *) malloc(header_size + 1);
+    response->data = (char *) malloc(recv_buff_len - header_size + 1);
     *response->header = 0;
     *response->data = 0;
     if (NULL == response->header) {
-        printk("parse_response: Unable to allocte header buffer\n");
+        printk("parse_response: Unable to allocate header buffer\n");
         return -2;
 
     }
     strncpy(response->header, recv_buff, header_size);
     response->header[header_size] = 0;
-
+    const size_t payload_len = recv_buff_len - header_size - 4; // 4 = CRLF
     char *data_start = header_end + 4;
     if (strstr(response->header, "Transfer-Encoding: chunked")) {
         int chunk_size = 0;
@@ -55,6 +56,14 @@ static int parse_response(IOTCONNECT_NRF_HTTP_RESPONSE *response,
                 } // else we are done
                 break;
             }
+            if (chunk_size + data_size > payload_len) {
+                printk(
+                        "parse_response: Unable to read chunk of size %u exceeding data length of %u\n",
+                        chunk_size,
+                        payload_len
+                );
+                return -4;
+            }
             printk("Chunk size %d\n", chunk_size);
             data_start = strstr(data_start, "\r\n");
             if (!data_start) {
@@ -69,8 +78,10 @@ static int parse_response(IOTCONNECT_NRF_HTTP_RESPONSE *response,
             data_start += 2; // \r\n at end of data
         } while (chunk_size > 0);
     } else {
-        memcpy(response->data, data_start, recv_buff_len - header_size - 4 /* two newlines */);
-        response->data[recv_buff_len - header_size] = 0;
+        // assume payload with content length and return
+        memcpy(response->data, data_start, payload_len /* two newlines */);
+        response->data[payload_len] = 0;
+        printk("Data: size %d data:====\n%s\n====\n", payload_len, response->data);
     }
     return 0;
 }
@@ -88,13 +99,13 @@ void iotconnect_https_request(
 
     response->data = NULL;
     response->header = NULL;
-    response->raw_response = NULL;
+    char *recv_buff = response->raw_response = malloc(MAX_RECV_LEN);
 
-    char *recv_buff = malloc(MAX_RECV_LEN);
     if (NULL == recv_buff) {
         printk("Out of memory while allocating receive buffer");
+        goto clean_up;
     }
-    memset(response, 0, sizeof(IOTCONNECT_NRF_HTTP_RESPONSE));
+    recv_buff[0] = 0; // terminate it as a string
 
     struct addrinfo hints = {
             .ai_family = AF_INET,
@@ -102,7 +113,7 @@ void iotconnect_https_request(
     };
     err = getaddrinfo(host, NULL, &hints, &ai);
     if (err) {
-        printk("Unable to resolve host");
+        printk("Unable to resolve host %s\n", host);
         goto clean_up;
     }
 
@@ -145,7 +156,7 @@ void iotconnect_https_request(
         }
         off += bytes;
     } while (off < send_str_len);
-    
+
     printk("%d bytes sent.\n", off);
 
     off = 0;
@@ -161,8 +172,6 @@ void iotconnect_https_request(
     } while (bytes != 0 /* peer closed connection */);
     printk("%d bytes received.\n", off);
     recv_buff[off] = 0;
-    // att hjis point raw response can be given to to the client;
-    response->raw_response = recv_buff;
 
     if (off == 0) {
         printk("Got empty response from server\n");
@@ -172,8 +181,15 @@ void iotconnect_https_request(
     if (parse_response(response, recv_buff, off)) {
         goto clean_up;
     }
-    // fall through
+
+    // good response, so only clean up resources
+    goto clean_up_resources;
+
     clean_up:
+    iotconnect_free_https_response(response);
+
+    // fall through
+    clean_up_resources:
     if (ai) {
         freeaddrinfo(ai);
     }
