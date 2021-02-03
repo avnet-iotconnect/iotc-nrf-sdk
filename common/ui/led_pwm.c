@@ -17,7 +17,7 @@
 #define LED_GREEN_PIN 30
 #define LED_BLUE_PIN 31
 
-const struct device *pwm_dev;
+static const struct device *pwm_dev;
 
 static const size_t led_pins[3] = {
 	LED_RED_PIN,

@@ -10,15 +10,16 @@
 #include <stdio.h>
 
 #include <zephyr.h>
-#include <net/mqtt.h>
 #include <modem/bsdlib.h>
 #include <modem/lte_lc.h>
 #include <modem/at_cmd.h>
-#include <led_pwm.h>
+
 #include <power/reboot.h>
 #include <dfu/mcuboot.h>
 #include <drivers/gps.h>
 
+#include "led_pwm.h"
+#include "buzzer.h"
 #include "iotconnect.h"
 #include "nrf_modem_if.h"
 #include "light_sensor.h"
@@ -38,7 +39,7 @@
 #endif
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.01.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.01.01" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 #define LED_MAX 20U
 
 static enum lte_lc_system_mode default_system_mode;
@@ -139,6 +140,123 @@ static int start_ota(char *url) {
     return -EINVAL;
 }
 
+static void command_status(IOTCL_EVENT_DATA data, bool status, const char *command_name, const char *message) {
+    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, status, message);
+    printk("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
+    printk("Sent CMD ack: %s\n", ack);
+    IotConnectSdk_SendPacket(ack);
+    free((void *) ack);
+}
+
+
+static void process_command(IOTCL_EVENT_DATA data, char *args) {
+    static const char* CMD_COLOR = "color";
+    static const char* CMD_COLOR_RGB = "color-rgb";
+    static const char* CMD_BUZZER_SET = "buzzer-set";
+    static const char* CMD_BUZZER_BEEP = "buzzer-beep";
+    static const char* CMD_BUZZER_TUNE = "buzzer-tune";
+
+    static const char * SPACE = " ";
+    char *command = strtok(args, SPACE);
+    char *arg = strtok(NULL, SPACE);
+    if (NULL == command) {
+        printk("No command!\n");
+        return;
+    }
+    if (0 == strcmp(CMD_COLOR_RGB, command)) {
+        const char *cmd  = CMD_COLOR_RGB;
+        if (NULL == arg) {
+            command_status(data, false, cmd, "Missing argument");
+            return;
+        }
+        int r, g, b;
+        int num_found = sscanf(arg, "%02x%02x%02x", &r, &g, &b);
+        if (3 != num_found) {
+            command_status(data, false, cmd, "Argument format error!");
+            return;
+        }
+        ui_led_set_rgb(r, g, b);
+        command_status(data, true, cmd, "Success");
+    } else if (0 == strcmp(CMD_COLOR, command)) {
+        const char* cmd = CMD_COLOR;
+        if (NULL == arg) {
+            command_status(data, false, cmd, "Missing argument");
+            return;
+        }
+        if (0 == strcmp("red", arg)) {
+            ui_led_set_rgb(LED_MAX, 0, 0);
+        } else if (0 == strcmp("green", arg)) {
+            ui_led_set_rgb(0, LED_MAX, 0);
+        } else if (0 == strcmp("blue", arg)) {
+            ui_led_set_rgb(0, 0, 1);
+        } else {
+            command_status(data,
+                           false,
+                           cmd,
+                           "Valid arguments are \"red\", \"green\" or \"blue\""
+            );
+            return;
+        }
+        command_status(data, true, cmd, "Success");
+    } else if (0 == strcmp(CMD_BUZZER_SET, command)) {
+        const char* cmd = CMD_BUZZER_SET;
+        if (NULL == arg) {
+            command_status(data, false, cmd, "Missing argument");
+            return;
+        }
+        uint32_t frequency;
+        int intensity;
+        int num_found = sscanf(arg, "%u,%d", &frequency, &intensity);
+        if (0 == num_found) {
+            command_status(data, false, cmd, "Argument format: \"<frequency>,<intensity>\"!");
+            return;
+        } else if (1 == num_found) {
+            intensity = 1;
+
+        }  // else should be 2
+        ui_buzzer_set_frequency(frequency, (uint8_t)intensity);
+        command_status(data, true, cmd, "Success");
+    } else if (0 == strcmp(CMD_BUZZER_BEEP, command)) {
+        const char* cmd = CMD_BUZZER_BEEP;
+        if (NULL == arg) {
+            arg = "400,50";
+        }
+        uint32_t frequency;
+        int intensity;
+        int num_found = sscanf(arg, "%u,%d", &frequency, &intensity);
+        if (0 == num_found) {
+            command_status(data, false, cmd, "Argument format: \"<frequency>,<intensity>\"!");
+            return;
+        } else if (1 == num_found) {
+            intensity = 1;
+
+        }  // else should be 2
+        ui_buzzer_set_frequency(frequency, (uint8_t)intensity);
+        command_status(data, true, cmd, "Success");
+        k_msleep(1000);
+        ui_buzzer_set_frequency(0,0);
+    } else if (0 == strcmp(CMD_BUZZER_TUNE, command)) {
+        const char* cmd = CMD_BUZZER_TUNE;
+        command_status(data, true, cmd, "Success");
+        ui_buzzer_set_frequency(100, 20);
+        k_msleep(150);
+        ui_buzzer_set_frequency(400, 20);
+        k_msleep(150);
+        ui_buzzer_set_frequency(200, 20);
+        k_msleep(150);
+        ui_buzzer_set_frequency(500, 20);
+        k_msleep(150);
+        ui_buzzer_set_frequency(0, 0);
+        k_msleep(150);
+        ui_buzzer_set_frequency(500, 20);
+        k_msleep(300);
+        ui_buzzer_set_frequency(0, 0);
+
+    } else {
+        command_status(data, false, command, "Unknown command");
+    }
+}
+
 static void on_ota(IOTCL_EVENT_DATA data) {
     const char *message = NULL;
     char *url = IOTCL_CloneDownloadUrl(data, 0);
@@ -164,7 +282,8 @@ static void on_ota(IOTCL_EVENT_DATA data) {
                 return;
             }
         } else {
-            printk("Device firmware version %s is newer than OTA version %s. Sending failure\n", MAIN_APP_VERSION, version);
+            printk("Device firmware version %s is newer than OTA version %s. Sending failure\n", MAIN_APP_VERSION,
+                   version);
             // Not sure what to do here. The app version is better than OTA version.
             // Probably a development version, so return failure?
             // The user should decide here.
@@ -181,7 +300,7 @@ static void on_ota(IOTCL_EVENT_DATA data) {
         if (NULL != command) {
             // URL will be inside the command
             printk("Command is: %s\n", command);
-            message = "Back end version 1.0 not supported by the app";
+            message = "Back end version 1.0 OTA not supported by the app";
             free((void *) command);
         }
     }
@@ -194,18 +313,13 @@ static void on_ota(IOTCL_EVENT_DATA data) {
 }
 
 static void on_command(IOTCL_EVENT_DATA data) {
-    const char *command = IOTCL_CloneCommand(data);
+    char *command = IOTCL_CloneCommand(data);
     if (NULL != command) {
         printk("Received command: %s\n", command);
+        process_command(data, command);
         free((void *) command);
-    }
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, false, "Not implemented");
-    if (NULL != ack) {
-        printk("Sent CMD ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
-        free((void *) ack);
     } else {
-        printk("Error while creating the ack JSON");
+        command_status(data, false, "?", "Internal error");
     }
 }
 
@@ -663,18 +777,18 @@ void main(void) {
     }
 
 #if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
-    /*
-    if(NrfCertStore_DeleteAllDeviceCerts()) {
-        printk("Failed to delete device certs\n");
-    } else {
-        printk("Device certs deleted\n");
-    }
-     */
-    if (program_test_certs(env, imei)) {
-        printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
-    } else {
-        printk("Device provisioned successfully\n");
-    }
+        /*
+        if(NrfCertStore_DeleteAllDeviceCerts()) {
+            printk("Failed to delete device certs\n");
+        } else {
+            printk("Device certs deleted\n");
+        }
+         */
+        if (program_test_certs(env, imei)) {
+            printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
+        } else {
+            printk("Device provisioned successfully\n");
+        }
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);
@@ -683,6 +797,7 @@ void main(void) {
     light_sensor_init();
     env_sensors_init();
     accelerometer_init();
+    ui_buzzer_init();
     dk_buttons_init(button_handler);
 
 #pragma clang diagnostic push
