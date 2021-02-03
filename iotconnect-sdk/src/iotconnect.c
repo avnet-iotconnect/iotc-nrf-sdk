@@ -197,10 +197,6 @@ void IotConnectSdk_Disconnect() {
     printk("Disconnecting...\n");
     mqtt_disconnect(&client);
     k_msleep(100);
-    IOTCL_DiscoveryFreeDiscoveryResponse(discovery_response);
-    IOTCL_DiscoveryFreeSyncResponse(sync_response);
-    discovery_response = NULL;
-    sync_response = NULL;
 }
 
 void IotConnectSdk_SendPacket(const char *data) {
@@ -215,7 +211,17 @@ static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type
             IotConnectSdk_Disconnect();
             IOTCL_DiscoveryFreeDiscoveryResponse(discovery_response);
             IOTCL_DiscoveryFreeSyncResponse(sync_response);
-            discovery_response = NULL;
+            sync_response = NULL;
+            discovery_response = run_http_discovery(config.cpid, config.env);
+            if (NULL == discovery_response) {
+                printk("Unable to run HTTP discovery on ON_FORCE_SYNC \n");
+                return;
+            }
+            sync_response = run_http_sync(config.cpid, config.duid);
+            if (NULL == sync_response) {
+                printk("Unable to run HTTP sync on ON_FORCE_SYNC \n");
+                return;
+            }
             (void) iotc_nrf_mqtt_init(&mqtt_config, sync_response);
         case ON_CLOSE:
             printk("Got a disconnect request. Closing the mqtt connection. Device restart is required.\n");
