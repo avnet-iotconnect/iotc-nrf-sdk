@@ -313,12 +313,37 @@ static int time_init() {
     printk("Failed to initialize time!\n");
     return -ETIMEDOUT;
 }
+//#define MEMORY_TEST
+#ifdef MEMORY_TEST
+#define TEST_BLOCK_SIZE  1024
+#define TEST_BLOCK_COUNT 100
+static void memory_test() {
+    static void *blocks[TEST_BLOCK_COUNT];
+    int i = 0;
+    for (; i < TEST_BLOCK_COUNT; i++) {
+        void *ptr = malloc(TEST_BLOCK_SIZE);
+        if (!ptr) {
+            break;
+        }
+        blocks[i] = ptr;
+    }
+    printk("====Allocated %d blocks of size %d (of max %d)===\n", i, TEST_BLOCK_SIZE, TEST_BLOCK_COUNT);
+    for (int j = 0; j < i; j++) {
+        free(blocks[j]);
+    }
+}
+#endif /* MEMORY_TEST */
 
 static int sdk_run() {
     int err;
     sdk_running = true;
     ui_led_set_rgb(LED_MAX, LED_MAX, 0);
-
+#ifdef MEMORY_TEST
+    // uncomment if you want to check memory
+    // we should have approximately the same amount of RAM every time we come in here
+    // The number of allocated blocks may vary a bit due to fragmentation
+    memory_test();
+#endif /* MEMORY_TEST */
     printk("Waiting for network.. ");
 
     err = lte_lc_connect();
@@ -570,32 +595,6 @@ static int setup_modem_gps(void) {
     return 0;
 }
 
-#if 0
-// heap test
-#define MAXBLOCKS 100
-void heap_check(unsigned int counter) {
-    // perform free memory check
-    if (0 != counter % 30) {
-        return;
-    }
-    int blockSize = 256;
-    printk("Checking memory with blocksize %d char ...\n", blockSize);
-    void * blocks[MAXBLOCKS];
-    int i = 0;
-    for (; i < MAXBLOCKS; i++) {
-        void *p = malloc(i * blockSize);
-        if (p == NULL){
-            break;
-        } else {
-            blocks[i] = p;
-        }
-    }
-    for (int f = 0; f < i; f++) {
-        free(blocks[f]);
-    }
-    printk("Allocated adn freed %d blocks\n", i);
-}
-#endif
 void main(void) {
     int err;
 
@@ -701,7 +700,7 @@ void main(void) {
 
             if (!sdk_run()) {
                 ui_led_set_rgb(LED_MAX, 0, 0);
-                k_msleep(3000);
+                k_msleep(1000);
                 ui_led_set_rgb(0, 0, 0);
             }
         }
