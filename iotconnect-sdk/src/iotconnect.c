@@ -34,6 +34,15 @@ static IOTCONNECT_MQTT_CONFIG mqtt_config = {0};
 
 static char send_buf[MAXLINE + 1];
 
+static void dump_response(const char *message, IOTCONNECT_NRF_HTTP_RESPONSE *response) {
+    printk("%s", message);
+    if (response->raw_response) {
+        printk(" Response was:\n----\n%s\n----\n", response->raw_response);
+    } else {
+        printk(" Response was empty\n");
+    }
+}
+
 static void report_sync_error(IOTCL_SyncResponse *response, const char *sync_response_str) {
     if (NULL == response) {
         printk("Failed to obtain sync response?\n");
@@ -90,23 +99,21 @@ static IOTCL_DiscoveryResponse *run_http_discovery(const char *cpid, const char 
     );
 
     if (NULL == response.data) {
-        printk("Unable to parse HTTP response. Response was:\n----\n%s\n----\n", response.raw_response);
+        dump_response("Unable to parse HTTP response,", &response);
         goto cleanup;
     }
     char *json_start = strstr(response.data, "{");
     if (NULL == json_start) {
-        printk("No json response from server. Response was:\n----\n%s\n----\n", response.raw_response);
+        dump_response("No json response from server.", &response);
         goto cleanup;
     }
     if (json_start != response.data) {
-        printk("WARN: Expected JSON to start immediately in the returned data. Response was:\n----\n%s\n----\n",
-               response.raw_response);
+        dump_response("WARN: Expected JSON to start immediately in the returned data.", &response);
     }
 
     ret = IOTCL_DiscoveryParseDiscoveryResponse(json_start);
 
-
-cleanup:
+    cleanup:
     iotconnect_free_https_response(&response);
     // fall through
     return ret;
@@ -138,23 +145,23 @@ static IOTCL_SyncResponse *run_http_sync(const char *cpid, const char *uniqueid)
     );
 
     if (NULL == response.data) {
-        printk("Unable to parse HTTP response. Response was:\n----\n%s\n----\n", response.raw_response);
+        dump_response("Unable to parse HTTP response.", &response);
         goto cleanup;
     }
     char *json_start = strstr(response.data, "{");
     if (NULL == json_start) {
-        printk("No json response from server. Response was:\n----\n%s\n----\n", response.raw_response);
+        dump_response("No json response from server.", &response);
         goto cleanup;
     }
     if (json_start != response.data) {
-        printk("WARN: Expected JSON to start immediately in the returned data. Response was:\n----\n%s\n----\n",
-               response.raw_response);
+        dump_response("WARN: Expected JSON to start immediately in the returned data.", &response);
     }
 
     ret = IOTCL_DiscoveryParseSyncResponse(json_start);
     if (!ret || ret->ds != IOTCL_SR_OK) {
         report_sync_error(ret, response.raw_response);
         IOTCL_DiscoveryFreeSyncResponse(ret);
+        ret = NULL;
     }
 
     cleanup:
@@ -206,11 +213,9 @@ static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type
     switch (type) {
         case ON_FORCE_SYNC:
             IotConnectSdk_Disconnect();
-            sync_response = run_http_sync(config.cpid, config.duid);
-            if (NULL == sync_response) {
-                printk("Failed to initialize the SDK\n");
-                break;
-            }
+            IOTCL_DiscoveryFreeDiscoveryResponse(discovery_response);
+            IOTCL_DiscoveryFreeSyncResponse(sync_response);
+            discovery_response = NULL;
             (void) iotc_nrf_mqtt_init(&mqtt_config, sync_response);
         case ON_CLOSE:
             printk("Got a disconnect request. Closing the mqtt connection. Device restart is required.\n");
@@ -241,19 +246,24 @@ bool IotConnectSdk_IsConnected() {
     return iotc_nrf_mqtt_is_connected();
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////////
 // this the Initialization os IoTConnect SDK
 int IotConnectSdk_Init() {
-    discovery_response = run_http_discovery(config.cpid, config.env);
-    if (NULL == discovery_response) {
-        // get_base_url will print the error
-        return -1;
+    if (!discovery_response) {
+        discovery_response = run_http_discovery(config.cpid, config.env);
+        if (NULL == discovery_response) {
+            // get_base_url will print the error
+            return -1;
+        }
     }
 
-    sync_response = run_http_sync(config.cpid, config.duid);
-    if (NULL == sync_response) {
-        // Sync_call will print the error
-        return -2;
+    if (!sync_response) {
+        sync_response = run_http_sync(config.cpid, config.duid);
+        if (NULL == sync_response) {
+            // Sync_call will print the error
+            return -2;
+        }
     }
 
     // We want to print only first 4 characters of cpid. %.4s doesn't seem to work with prink
