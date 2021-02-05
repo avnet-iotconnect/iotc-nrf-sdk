@@ -33,6 +33,7 @@
 
 #include "nrf_cert_store.h"
 #include "nrf_fota.h"
+#include "app_common.h"
 
 #if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
 #include "test_certs.h"
@@ -40,7 +41,6 @@
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
 #define MAIN_APP_VERSION "01.01.01" // Use two-digit or letter version so that we can use strcmp to see if version is greater
-#define LED_MAX 20U
 
 static enum lte_lc_system_mode default_system_mode;
 
@@ -138,123 +138,6 @@ static int start_ota(char *url) {
         }
     }
     return -EINVAL;
-}
-
-static void command_status(IOTCL_EVENT_DATA data, bool status, const char *command_name, const char *message) {
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, status, message);
-    printk("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
-    printk("Sent CMD ack: %s\n", ack);
-    IotConnectSdk_SendPacket(ack);
-    free((void *) ack);
-}
-
-
-static void process_command(IOTCL_EVENT_DATA data, char *args) {
-    static const char* CMD_COLOR = "color";
-    static const char* CMD_COLOR_RGB = "color-rgb";
-    static const char* CMD_BUZZER_SET = "buzzer-set";
-    static const char* CMD_BUZZER_BEEP = "buzzer-beep";
-    static const char* CMD_BUZZER_TUNE = "buzzer-tune";
-
-    static const char * SPACE = " ";
-    char *command = strtok(args, SPACE);
-    char *arg = strtok(NULL, SPACE);
-    if (NULL == command) {
-        printk("No command!\n");
-        return;
-    }
-    if (0 == strcmp(CMD_COLOR_RGB, command)) {
-        const char *cmd  = CMD_COLOR_RGB;
-        if (NULL == arg) {
-            command_status(data, false, cmd, "Missing argument");
-            return;
-        }
-        int r, g, b;
-        int num_found = sscanf(arg, "%02x%02x%02x", &r, &g, &b);
-        if (3 != num_found) {
-            command_status(data, false, cmd, "Argument format error!");
-            return;
-        }
-        ui_led_set_rgb(r, g, b);
-        command_status(data, true, cmd, "Success");
-    } else if (0 == strcmp(CMD_COLOR, command)) {
-        const char* cmd = CMD_COLOR;
-        if (NULL == arg) {
-            command_status(data, false, cmd, "Missing argument");
-            return;
-        }
-        if (0 == strcmp("red", arg)) {
-            ui_led_set_rgb(LED_MAX, 0, 0);
-        } else if (0 == strcmp("green", arg)) {
-            ui_led_set_rgb(0, LED_MAX, 0);
-        } else if (0 == strcmp("blue", arg)) {
-            ui_led_set_rgb(0, 0, 1);
-        } else {
-            command_status(data,
-                           false,
-                           cmd,
-                           "Valid arguments are \"red\", \"green\" or \"blue\""
-            );
-            return;
-        }
-        command_status(data, true, cmd, "Success");
-    } else if (0 == strcmp(CMD_BUZZER_SET, command)) {
-        const char* cmd = CMD_BUZZER_SET;
-        if (NULL == arg) {
-            command_status(data, false, cmd, "Missing argument");
-            return;
-        }
-        uint32_t frequency;
-        int intensity;
-        int num_found = sscanf(arg, "%u,%d", &frequency, &intensity);
-        if (0 == num_found) {
-            command_status(data, false, cmd, "Argument format: \"<frequency>,<intensity>\"!");
-            return;
-        } else if (1 == num_found) {
-            intensity = 1;
-
-        }  // else should be 2
-        ui_buzzer_set_frequency(frequency, (uint8_t)intensity);
-        command_status(data, true, cmd, "Success");
-    } else if (0 == strcmp(CMD_BUZZER_BEEP, command)) {
-        const char* cmd = CMD_BUZZER_BEEP;
-        if (NULL == arg) {
-            arg = "400,50";
-        }
-        uint32_t frequency;
-        int intensity;
-        int num_found = sscanf(arg, "%u,%d", &frequency, &intensity);
-        if (0 == num_found) {
-            command_status(data, false, cmd, "Argument format: \"<frequency>,<intensity>\"!");
-            return;
-        } else if (1 == num_found) {
-            intensity = 1;
-
-        }  // else should be 2
-        ui_buzzer_set_frequency(frequency, (uint8_t)intensity);
-        command_status(data, true, cmd, "Success");
-        k_msleep(1000);
-        ui_buzzer_set_frequency(0,0);
-    } else if (0 == strcmp(CMD_BUZZER_TUNE, command)) {
-        const char* cmd = CMD_BUZZER_TUNE;
-        command_status(data, true, cmd, "Success");
-        ui_buzzer_set_frequency(100, 20);
-        k_msleep(150);
-        ui_buzzer_set_frequency(400, 20);
-        k_msleep(150);
-        ui_buzzer_set_frequency(200, 20);
-        k_msleep(150);
-        ui_buzzer_set_frequency(500, 20);
-        k_msleep(150);
-        ui_buzzer_set_frequency(0, 0);
-        k_msleep(150);
-        ui_buzzer_set_frequency(500, 20);
-        k_msleep(300);
-        ui_buzzer_set_frequency(0, 0);
-
-    } else {
-        command_status(data, false, command, "Unknown command");
-    }
 }
 
 static void on_ota(IOTCL_EVENT_DATA data) {

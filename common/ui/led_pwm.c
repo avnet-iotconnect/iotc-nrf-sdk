@@ -19,14 +19,14 @@
 
 static const struct device *pwm_dev;
 
-static const size_t led_pins[3] = {
-	LED_RED_PIN,
-	LED_GREEN_PIN,
-	LED_BLUE_PIN,
-};
 
 static void pwm_out(struct led_color *color)
 {
+    static const size_t led_pins[3] = {
+            LED_RED_PIN,
+            LED_GREEN_PIN,
+            LED_BLUE_PIN,
+    };
 	for (size_t i = 0; i < ARRAY_SIZE(color->c); i++) {
 		pwm_pin_set_usec(pwm_dev, led_pins[i],
 				 255, color->c[i], 0);
@@ -56,7 +56,7 @@ int ui_leds_init(void)
 	return err;
 }
 
-int ui_led_set_rgb(u8_t red, u8_t green, u8_t blue)
+int ui_led_set_rgb(uint8_t red, uint8_t green, uint8_t blue)
 {
     if (!pwm_dev) {
         return -ENODEV;
