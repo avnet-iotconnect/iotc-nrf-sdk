@@ -12,6 +12,8 @@
 #ifndef UI_LEDS_H__
 #define UI_LEDS_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,7 +22,7 @@ extern "C" {
 int ui_leds_init(void);
 
 /**@brief Sets RGB and light intensity values, in 0 - 255 ranges. */
-int ui_led_set_rgb(u8_t red, u8_t green, u8_t blue);
+int ui_led_set_rgb(uint8_t red, uint8_t green, uint8_t blue);
 
 #ifdef __cplusplus
 }

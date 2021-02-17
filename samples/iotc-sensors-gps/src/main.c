@@ -10,15 +10,16 @@
 #include <stdio.h>
 
 #include <zephyr.h>
-#include <net/mqtt.h>
 #include <modem/bsdlib.h>
 #include <modem/lte_lc.h>
 #include <modem/at_cmd.h>
-#include <led_pwm.h>
+
 #include <power/reboot.h>
 #include <dfu/mcuboot.h>
 #include <drivers/gps.h>
 
+#include "led_pwm.h"
+#include "buzzer.h"
 #include "iotconnect.h"
 #include "nrf_modem_if.h"
 #include "light_sensor.h"
@@ -32,14 +33,14 @@
 
 #include "nrf_cert_store.h"
 #include "nrf_fota.h"
+#include "app_common.h"
 
 #if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
 #include "test_certs.h"
 #endif
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.00.01" // Use two-digit or letter version so that we can use strcmp to see if version is greater
-#define LED_MAX 20U
+#define MAIN_APP_VERSION "01.01.01" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 
 static enum lte_lc_system_mode default_system_mode;
 
@@ -164,7 +165,8 @@ static void on_ota(IOTCL_EVENT_DATA data) {
                 return;
             }
         } else {
-            printk("Device firmware version %s is newer than OTA version %s. Sending failure\n", MAIN_APP_VERSION, version);
+            printk("Device firmware version %s is newer than OTA version %s. Sending failure\n", MAIN_APP_VERSION,
+                   version);
             // Not sure what to do here. The app version is better than OTA version.
             // Probably a development version, so return failure?
             // The user should decide here.
@@ -181,7 +183,7 @@ static void on_ota(IOTCL_EVENT_DATA data) {
         if (NULL != command) {
             // URL will be inside the command
             printk("Command is: %s\n", command);
-            message = "Back end version 1.0 not supported by the app";
+            message = "Back end version 1.0 OTA not supported by the app";
             free((void *) command);
         }
     }
@@ -194,18 +196,13 @@ static void on_ota(IOTCL_EVENT_DATA data) {
 }
 
 static void on_command(IOTCL_EVENT_DATA data) {
-    const char *command = IOTCL_CloneCommand(data);
+    char *command = IOTCL_CloneCommand(data);
     if (NULL != command) {
         printk("Received command: %s\n", command);
+        process_command(data, command);
         free((void *) command);
-    }
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, false, "Not implemented");
-    if (NULL != ack) {
-        printk("Sent CMD ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
-        free((void *) ack);
     } else {
-        printk("Error while creating the ack JSON");
+        command_status(data, false, "?", "Internal error");
     }
 }
 
@@ -224,7 +221,7 @@ static void on_connection_status(IOT_CONNECT_STATUS status) {
 #endif
             break;
         case MQTT_DISCONNECTED:
-            printk("IoTConnect MQTT Disonnected\n");
+            printk("IoTConnect MQTT Disconnected\n");
             ui_led_set_rgb(LED_MAX, 0, 0);
             break;
         case MQTT_FAILED:
@@ -313,12 +310,37 @@ static int time_init() {
     printk("Failed to initialize time!\n");
     return -ETIMEDOUT;
 }
+//#define MEMORY_TEST
+#ifdef MEMORY_TEST
+#define TEST_BLOCK_SIZE  1024
+#define TEST_BLOCK_COUNT 100
+static void memory_test() {
+    static void *blocks[TEST_BLOCK_COUNT];
+    int i = 0;
+    for (; i < TEST_BLOCK_COUNT; i++) {
+        void *ptr = malloc(TEST_BLOCK_SIZE);
+        if (!ptr) {
+            break;
+        }
+        blocks[i] = ptr;
+    }
+    printk("====Allocated %d blocks of size %d (of max %d)===\n", i, TEST_BLOCK_SIZE, TEST_BLOCK_COUNT);
+    for (int j = 0; j < i; j++) {
+        free(blocks[j]);
+    }
+}
+#endif /* MEMORY_TEST */
 
 static int sdk_run() {
     int err;
     sdk_running = true;
     ui_led_set_rgb(LED_MAX, LED_MAX, 0);
-
+#ifdef MEMORY_TEST
+    // uncomment if you want to check memory
+    // we should have approximately the same amount of RAM every time we come in here
+    // The number of allocated blocks may vary a bit due to fragmentation
+    memory_test();
+#endif /* MEMORY_TEST */
     printk("Waiting for network.. ");
 
     err = lte_lc_connect();
@@ -345,7 +367,7 @@ static int sdk_run() {
         return -EINVAL;
     }
 
-    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_GetConfig();
+    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
     config->cpid = cpid;
     config->duid = duid;
     config->env = env;
@@ -556,32 +578,6 @@ static int setup_modem_gps(void) {
     return 0;
 }
 
-#if 0
-// heap test
-#define MAXBLOCKS 100
-void heap_check(unsigned int counter) {
-    // perform free memory check
-    if (0 != counter % 30) {
-        return;
-    }
-    int blockSize = 256;
-    printk("Checking memory with blocksize %d char ...\n", blockSize);
-    void * blocks[MAXBLOCKS];
-    int i = 0;
-    for (; i < MAXBLOCKS; i++) {
-        void *p = malloc(i * blockSize);
-        if (p == NULL){
-            break;
-        } else {
-            blocks[i] = p;
-        }
-    }
-    for (int f = 0; f < i; f++) {
-        free(blocks[f]);
-    }
-    printk("Allocated adn freed %d blocks\n", i);
-}
-#endif
 void main(void) {
     int err;
 
@@ -650,18 +646,18 @@ void main(void) {
     }
 
 #if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
-    /*
-    if(NrfCertStore_DeleteAllDeviceCerts()) {
-        printk("Failed to delete device certs\n");
-    } else {
-        printk("Device certs deleted\n");
-    }
-     */
-    if (program_test_certs(env, imei)) {
-        printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
-    } else {
-        printk("Device provisioned successfully\n");
-    }
+        /*
+        if(NrfCertStore_DeleteAllDeviceCerts()) {
+            printk("Failed to delete device certs\n");
+        } else {
+            printk("Device certs deleted\n");
+        }
+         */
+        if (program_test_certs(env, imei)) {
+            printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
+        } else {
+            printk("Device provisioned successfully\n");
+        }
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);
@@ -670,6 +666,7 @@ void main(void) {
     light_sensor_init();
     env_sensors_init();
     accelerometer_init();
+    ui_buzzer_init();
     dk_buttons_init(button_handler);
 
 #pragma clang diagnostic push
@@ -689,7 +686,7 @@ void main(void) {
 
             if (!sdk_run()) {
                 ui_led_set_rgb(LED_MAX, 0, 0);
-                k_msleep(3000);
+                k_msleep(1000);
                 ui_led_set_rgb(0, 0, 0);
             }
         }

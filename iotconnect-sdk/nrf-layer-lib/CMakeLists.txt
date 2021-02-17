@@ -9,6 +9,7 @@ zephyr_include_directories(
 
 zephyr_library_sources(
         src/iotconnect_mqtt.c
+        src/iotconnect_socket_https.c
         src/nrf_modem_if.c
         src/nrf_cert_store.c
         src/nrf_fota.c

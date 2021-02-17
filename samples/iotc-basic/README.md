@@ -31,3 +31,15 @@ The sensors code is modified slightly from the asset_tracker application for sim
 Once the project is configured, built and flashed onto your board, the application will run for several minutes. You can interrupt it by pressing the middle button. Pressing the button again will reset the board.
 
 You can increase the APP_VERSION number, rebuild the app, upload app_signed.bin into iotconnect and push an OTA to your board. The board will update itself if the new version is greater (string comparison) than the currently running version. 
+
+### Led Color (Thingy 91) and button Behavior
+
+If you running on Thingy 91 the LED colors will reflect the current state of the application:
+
+* Yellow - Application startup, MQTT connecting, or FOTA in progress 
+* Purple - Acquiring HTTP discovery response during SDK startup 
+* Green - MQTT Connected 
+* Red - SDK Disconnecting
+
+* Pressing the button will cycle the application between disconnecting the MQTT connection and bring ther modem offline and
+running the application.

@@ -60,6 +60,8 @@ project(iotconnect-sample)
 zephyr_compile_definitions(PROJECT_NAME=${PROJECT_NAME})
 zephyr_compile_definitions(_POSIX_C_SOURCE=200809L)
 
+target_sources(app PRIVATE src/app_common.h)
+target_sources(app PRIVATE src/command_handling.c)
 target_sources(app PRIVATE src/main.c)
 target_sources(app PRIVATE src/test_certs.c)
 

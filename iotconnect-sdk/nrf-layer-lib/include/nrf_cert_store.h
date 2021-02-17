@@ -7,6 +7,7 @@
 #ifndef IOTCONNECT_CERT_STORE_H
 #define IOTCONNECT_CERT_STORE_H
 
+#include <net/tls_credentials.h>
 #include <net/mqtt.h>
 
 #ifdef __cplusplus
@@ -23,6 +24,7 @@ extern "C" {
 #define TLS_SEC_TAG_IOTCONNECT_OTA      10703
 
 // App interface
+
 int NrfCertStore_ProvisionApiCerts(void);
 
 int NrfCertStore_ProvisionOtaCerts(void);
@@ -31,7 +33,9 @@ int NrfCertStore_SaveDeviceCert(const char *device_private_key, const char *devi
 
 int NrfCertStore_DeleteAllDeviceCerts();
 
-// IoTConnect Interface
+int NrfCertStore_ConfigureHttpsFd(sec_tag_t sec_tag, int fd);
+
+// IoTConnect API Interface
 int NrfCertStore_ConfigureApiFd(int fd);
 
 void NrfCertStore_ConfigureTls(struct mqtt_sec_config *tls_config);

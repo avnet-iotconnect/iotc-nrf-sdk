@@ -34,6 +34,76 @@ to have proper time integration.
 * If you wish to build the project on linux without the Segger Embedded Studio, 
 you can follow the steps in .github/workflows/main.yml and run appropriate scripts in the scripts directory.
 
+### Integrating the SDK Into your own project.
+
+The samples should contain most of the code that you can re-use and add to your application. 
+
+In order to use the SDK in your own project, ensure that version of cJSON required by the 
+IoTConnect C Library is included in your build. Also follow the instructions above to 
+modify gettimeofday function so that the SDK can can use time properly.
+
+Ensure that your application obtains and sets the current time before telemetry messages are sent.
+
+In your CMakeLists.txt include the iotconnect-sdk library from this repo.
+
+Before the library is initialized, set up the HTTP SEC_TAGs 10702 and 10703 on the modem per nrf_cert_store.h, 
+or call:
+
+```c
+    err = NrfCertStore_ProvisionApiCerts();
+    if (err) {
+        printk("Failed to provision API certificates!\n");
+    }
+
+    err = NrfCertStore_ProvisionOtaCerts();
+    if (err) {
+        printk("Failed to provision OTA certificates!\n");
+    }
+```
+
+Follow the certificates section to set up SEC_TAG 10701 with CA Cert, your device certificate and key.  
+
+In your application code, initialize the SDK:
+
+```editorconfig
+    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
+    config->cpid = "Your CPID";
+    config->duid = "Your Cevice Unique ID";
+    config->env = "Your Environment";
+    config->cmd_cb = on_command;
+    config->ota_cb = on_ota;
+    config->status_cb = on_connection_status;
+
+    int result = IotConnectSdk_Init();
+    if (0 != result) {
+        printk("Failed to initialize the SDK\n");
+    }
+
+```
+
+You can assign callbacks to NULL or implement on_command, on_ota, and on_connection_status depending on your needs. 
+
+Ether from a task or your main code, call *IotConnectSdk_Loop()* periodically. The function  will 
+call the MQTT loop to receive messages. Calling this function more frequently will ensure 
+that your commands and OTA mesages are received quicker. Call the function more frequently than CONFIG_MQTT_KEEPALIVE
+configured in KConfig.
+
+Set send telemtery messages by calling the iotc-c-lib the library telemetry message functions and send them with 
+*IotConnectSdk_SendPacket()*:
+
+```editorconfig
+    IOTCL_MESSAGE_HANDLE msg = IOTCL_TelemetryCreate(IotConnectSdk_GetLibConfig());
+    IOTCL_TelemetrySetString(msg, "your-name", "your value");
+    // etc.
+        const char *str = IOTCL_CreateSerializedString(msg, false);
+    IOTCL_TelemetryDestroy(msg);
+    IotConnectSdk_SendPacket(str);
+    IOTCL_DestroySerialized(str);
+
+``` 
+
+Call *IotConnectSdk_Disconnect()* when done.
+
 ### Provisioning the Board and adding it to IoTConnect
 
 Before the project can be run, the certificates need to be uploaded onto the board's modem and and your 

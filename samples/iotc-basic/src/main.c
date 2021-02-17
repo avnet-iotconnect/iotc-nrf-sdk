@@ -33,7 +33,7 @@
 #endif
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.00.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.01.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 #define LED_MAX 20U
 
 static char duid[30] = "nrf-dk-test"; // When using this code, your device ID will be nrf-IMEI.
@@ -205,7 +205,7 @@ static void on_connection_status(IOT_CONNECT_STATUS status) {
 #endif
             break;
         case MQTT_DISCONNECTED:
-            printk("IoTConnect MQTT Disonnected\n");
+            printk("IoTConnect MQTT Disconnected\n");
             ui_led_set_rgb(LED_MAX, 0, 0);
             break;
         case MQTT_FAILED:
@@ -281,7 +281,7 @@ static int sdk_run() {
         return -EINVAL;
     }
 
-    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_GetConfig();
+    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
     config->cpid = cpid;
     config->duid = duid;
     config->env = env;
