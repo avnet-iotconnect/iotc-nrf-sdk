@@ -40,7 +40,7 @@
 #endif
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.01.01" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.01.02" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 
 static enum lte_lc_system_mode default_system_mode;
 

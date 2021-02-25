@@ -275,7 +275,7 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
 
         case MQTT_EVT_PUBLISH: {
             const struct mqtt_publish_param *p = &evt->param.publish;
-
+            // mqtt_publish_qos1_ack(c, &evt->param.puback); // this doesn't seem to work with QOS_1
             printk("MQTT PUBLISH result=%d len=%d\n", evt->result, p->message.payload.len);
             err = get_event_payload(c, p->message.payload.len);
             if (err >= 0) {
@@ -328,7 +328,7 @@ static int subscribe(void) {
                     .utf8 = sync_response->broker.sub_topic,
                     .size = strlen(sync_response->broker.sub_topic)
             },
-                    .qos = MQTT_QOS_1_AT_LEAST_ONCE
+                    .qos = MQTT_QOS_0_AT_MOST_ONCE
             }/*
             ,
 
@@ -336,13 +336,13 @@ static int subscribe(void) {
                     .utf8 = twinPropertySubTopic,
                     .size = strlen(twinPropertySubTopic)
             },
-                    .qos = MQTT_QOS_1_AT_LEAST_ONCE
+                    .qos = MQTT_QOS_0_AT_MOST_ONCE
             },
             {.topic = {
                     .utf8 = twinResponseSubTopic,
                     .size = strlen(twinResponseSubTopic)
             },
-                    .qos = MQTT_QOS_1_AT_LEAST_ONCE
+                    .qos = MQTT_QOS_0_AT_MOST_ONCE
             }
             */
     };
