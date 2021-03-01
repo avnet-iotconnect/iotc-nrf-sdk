@@ -243,6 +243,7 @@ static void publish_telemetry() {
 
     IOTCL_TelemetrySetNumber(msg, "cpu", 33);
 
+#if 0
     {
         light_sensor_data_t ld = {0};
         if (0 == light_sensor_get_data(&ld)) {
@@ -283,12 +284,12 @@ static void publish_telemetry() {
             IOTCL_TelemetrySetString(msg, "ms_orientation", orientation);
         }
 
-        if (gps_lat != INVALID_LAT_LON && gps_lng != INVALID_LAT_LON) {
-            IOTCL_TelemetrySetNumber(msg, "gps_lat", gps_lat);
-            IOTCL_TelemetrySetNumber(msg, "gps_lng", gps_lng);
-        }
     }
-
+#endif
+    if (gps_lat != INVALID_LAT_LON && gps_lng != INVALID_LAT_LON) {
+        IOTCL_TelemetrySetNumber(msg, "gps_lat", gps_lat);
+        IOTCL_TelemetrySetNumber(msg, "gps_lng", gps_lng);
+    }
     const char *str = IOTCL_CreateSerializedString(msg, false);
     IOTCL_TelemetryDestroy(msg);
     printk("Sending: %s\n", str);
@@ -387,6 +388,7 @@ static int sdk_run() {
     time_t last_send_time = now - CONFIG_TELEMETRY_SEND_INTERVAL_SECS; // send data every 10 seconds
     time_t stop_send_time = now + 60 * CONFIG_TELEMETRY_DURATION_MINUTES; // stop sending after a few minutes
 
+    gps_control_start();
     k_msleep(1000);
 
     do {
@@ -418,7 +420,9 @@ static int sdk_run() {
     k_msleep(CONFIG_MAIN_LOOP_INTERVAL_MS);
     if (!fota_in_progress) {
         // special case. don't go offline here. let fota do its thing
+#if 0
         lte_lc_offline();
+#endif
         ui_led_set_rgb(0, 0, 0);
     } else {
         printk("-----AWAITING OTA----\n");
@@ -534,8 +538,10 @@ static void gps_evt_handler(const struct device *dev, struct gps_event *evt) {
 //                printf("..............GPS Latitude is %f\n", gps_lat);             
 //                printf("..............GPS Longtitude is %f\n", gps_lng);
 
+#if 0
             gps_do_stop = true;
             sdk_do_run = true;
+#endif
             break;
         }
         case GPS_EVT_OPERATION_BLOCKED:
@@ -693,7 +699,9 @@ void main(void) {
         if (!sdk_running && gps_do_run && !gps_running) {
             gps_do_run = false;
             gps_running = true;
+#if 0
             lte_lc_offline();
+#endif
             gps_handler();
         }
         if (do_reboot) {
