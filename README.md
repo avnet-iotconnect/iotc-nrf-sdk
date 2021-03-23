@@ -128,8 +128,8 @@ telemetry field "cpu". For the nrf-sensors-gps sample, see the values in the pub
 * Follow the instructions displayed at the top of the window to bring the modem into offline mode with AT+CFUN=4.
 * Copy and paste the contents of the following certificates (including the BEGIN and END lines):
   * CA Certificate: BaltimoreCyberTrustRoot.crt.pem
-  * Client Certificate: the generated nrf-**YourIMEI**-crt.pem
-  * Private Key: the generated nrf-**YourIMEI**-key.pem
+  * Client Certificate: the generated nrf-*YourIMEI*-crt.pem
+  * Private Key: the generated nrf-*YourIMEI*-key.pem
 * Enter 10701 into the Security Tag field.
 * Click the Update Certificates button in the bottom right of the window.
 
