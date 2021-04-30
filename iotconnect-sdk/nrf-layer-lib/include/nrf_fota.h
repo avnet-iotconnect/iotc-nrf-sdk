@@ -13,14 +13,14 @@
 extern "C" {
 #endif
 
-typedef struct IOTCONNECT_NRF_OTA_CONFIG_T {
+typedef struct IotconnectNrfFotaConfig {
     const char *host;
     const char *path;
     int sec_tag; // optional sec tag to use for download. -1 for http. 0 is default: maps to TLS_SEC_TAG_MICROSOFT_CERTS
     int port; // optional for custom fota. default 0: maps to 433
     char *apn; // reserved for future use. Set it to NULL (0)
     fota_download_callback_t fota_cb; // optional user callback to handle NRF fota events. Default NULL (0)
-} IOTCONNECT_NRF_FOTA_CONFIG;
+} IotconnectNrfFotaConfig;
 
 /*
  * Example simple OTA initiation:
@@ -38,7 +38,7 @@ typedef struct IOTCONNECT_NRF_OTA_CONFIG_T {
 int nrf_fota_init();
 
 // @brief Starts FOTA. Returns 0 on success.
-int nrf_fota_start(IOTCONNECT_NRF_FOTA_CONFIG *config);
+int nrf_fota_start(IotconnectNrfFotaConfig *config);
 
 #ifdef __cplusplus
 }

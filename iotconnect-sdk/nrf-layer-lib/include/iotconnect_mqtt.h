@@ -16,16 +16,16 @@
 extern "C" {
 #endif
 
-typedef void (*IOT_CONNECT_MQT_ON_DATA_CB)(const uint8_t *data, size_t len, const char *topic);
+typedef void (*IotconnectMqttOnDataCallback)(const uint8_t *data, size_t len, const char *topic);
 
 typedef struct {
     int tls_verify; // NONE = 0, OPTIONAL = 1, REQUIRED = 2
     const char *env; // Environment name. Contact your representative for details. Same as telemetry config.
-    IOT_CONNECT_MQT_ON_DATA_CB data_cb; // callback for OTA events.
-    IOT_CONNECT_STATUS_CB status_cb; // callback for command events.
-} IOTCONNECT_MQTT_CONFIG;
+    IotconnectMqttOnDataCallback data_cb; // callback for OTA events.
+    IotConnectStatusCallback status_cb; // callback for command events.
+} IotconnectMqttConfig;
 
-bool iotc_nrf_mqtt_init(IOTCONNECT_MQTT_CONFIG *config, IOTCL_SyncResponse* sr);
+bool iotc_nrf_mqtt_init(IotconnectMqttConfig *config, IotclSyncResponse *sr);
 
 void iotc_nrf_mqtt_loop();
 

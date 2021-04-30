@@ -8,16 +8,16 @@
 #include "iotconnect.h"
 #include "app_common.h"
 
-void command_status(IOTCL_EVENT_DATA data, bool status, const char *command_name, const char *message) {
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, status, message);
+void command_status(IotclEventData data, bool status, const char *command_name, const char *message) {
+    const char *ack = iotcl_create_ack_string_and_destroy_event(data, status, message);
     printk("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
     printk("Sent CMD ack: %s\n", ack);
-    IotConnectSdk_SendPacket(ack);
+    iotconnect_sdk_send_packet(ack);
     free((void *) ack);
 }
 
 
-void process_command(IOTCL_EVENT_DATA data, char *args) {
+void process_command(IotclEventData data, char *args) {
     static const char* CMD_COLOR = "color";
     static const char* CMD_COLOR_RGB = "color-rgb";
     static const char* CMD_BUZZER_SET = "buzzer-set";

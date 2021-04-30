@@ -146,27 +146,27 @@ int program_test_certs(const char *env, const char *imei) {
     // but only if environment = "qa".
     if (0 == strcmp("qa", env)) {
         if (0 == strcmp("352656100380644", imei)) {
-            err = NrfCertStore_SaveDeviceCert(
+            err = nrf_cert_store_save_device_cert(
                     QA_PKEY_352656100380644,
                     QA_CERT_352656100380644
             );
         } else if (0 == strcmp("352656100880056", imei)) {
-            err = NrfCertStore_SaveDeviceCert(
+            err = nrf_cert_store_save_device_cert(
                     QA_PKEY_352656100880056,
                     QA_CERT_352656100880056
             );
         } else if (0 == strcmp("352656100878605", imei)) {
-            err = NrfCertStore_SaveDeviceCert(
+            err = nrf_cert_store_save_device_cert(
                     QA_PKEY_352656100878605,
                     QA_CERT_352656100878605
             );
         } else if (0 == strcmp("352656100877458", imei)) {
-            err = NrfCertStore_SaveDeviceCert(
+            err = nrf_cert_store_save_device_cert(
                     QA_PKEY_352656100877458,
                     QA_CERT_352656100877458
             );
         } else if (0 == strcmp("352656100883605", imei)) {
-            err = NrfCertStore_SaveDeviceCert(
+            err = nrf_cert_store_save_device_cert(
                     QA_PKEY_352656100883605,
                     QA_CERT_352656100883605
             );

@@ -24,17 +24,17 @@
 
 
 /* Buffers for MQTT client. */
-IOTCL_DiscoveryResponse *discovery_response = NULL;
-IOTCL_SyncResponse *sync_response = NULL;
+IotclDiscoveryResponse *discovery_response = NULL;
+IotclSyncResponse *sync_response = NULL;
 struct mqtt_client client;
 
-static IOTCONNECT_CLIENT_CONFIG config = {0};
-static IOTCL_CONFIG lib_config = {0};;
-static IOTCONNECT_MQTT_CONFIG mqtt_config = {0};
+static IotconnectClientConfig config = {0};
+static IotclConfig lib_config = {0};;
+static IotconnectMqttConfig mqtt_config = {0};
 
 static char send_buf[MAXLINE + 1];
 
-static void dump_response(const char *message, IOTCONNECT_NRF_HTTP_RESPONSE *response) {
+static void dump_response(const char *message, IotconnectNrfHttpResponse *response) {
     printk("%s", message);
     if (response->raw_response) {
         printk(" Response was:\n----\n%s\n----\n", response->raw_response);
@@ -43,7 +43,7 @@ static void dump_response(const char *message, IOTCONNECT_NRF_HTTP_RESPONSE *res
     }
 }
 
-static void report_sync_error(IOTCL_SyncResponse *response, const char *sync_response_str) {
+static void report_sync_error(IotclSyncResponse *response, const char *sync_response_str) {
     if (NULL == response) {
         printk("Failed to obtain sync response?\n");
         return;
@@ -83,15 +83,15 @@ static void report_sync_error(IOTCL_SyncResponse *response, const char *sync_res
     printk("Raw server response was:\n--------------\n%s\n--------------\n", sync_response_str);
 }
 
-static IOTCL_DiscoveryResponse *run_http_discovery(const char *cpid, const char *env) {
-    IOTCL_DiscoveryResponse *ret = NULL;
+static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *env) {
+    IotclDiscoveryResponse *ret = NULL;
 
-    int HTTP_HEAD_LEN = snprintk(send_buf,
+    int http_head_len = snprintk(send_buf,
                                  MAXLINE, /*total length should not exceed MTU size*/
     IOTCONNECT_DISCOVERY_HEADER_TEMPLATE, cpid, env
     );
-    send_buf[HTTP_HEAD_LEN] = 0;
-    IOTCONNECT_NRF_HTTP_RESPONSE response;
+    send_buf[http_head_len] = 0;
+    IotconnectNrfHttpResponse response;
     iotconnect_https_request(&response,
                              IOTCONNECT_DISCOVERY_HOSTNAME,
                              TLS_SEC_TAG_IOTCONNECT_API,
@@ -111,7 +111,7 @@ static IOTCL_DiscoveryResponse *run_http_discovery(const char *cpid, const char 
         dump_response("WARN: Expected JSON to start immediately in the returned data.", &response);
     }
 
-    ret = IOTCL_DiscoveryParseDiscoveryResponse(json_start);
+    ret = iotcl_discovery_parse_discovery_response(json_start);
 
     cleanup:
     iotconnect_free_https_response(&response);
@@ -121,8 +121,8 @@ static IOTCL_DiscoveryResponse *run_http_discovery(const char *cpid, const char 
 
 }
 
-static IOTCL_SyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
-    IOTCL_SyncResponse *ret = NULL;
+static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
+    IotclSyncResponse *ret = NULL;
     char post_data[IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_MAX_LEN + 1] = {0};
     snprintk(post_data,
              IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_MAX_LEN, /*total length should not exceed MTU size*/
@@ -131,13 +131,13 @@ static IOTCL_SyncResponse *run_http_sync(const char *cpid, const char *uniqueid)
              uniqueid
     );
 
-    int HTTP_POST_LEN = snprintk(send_buf,
+    int http_post_len = snprintk(send_buf,
                                  1024, /*total length should not exceed MTU size*/
                                  IOTCONNECT_SYNC_HEADER_TEMPLATE, discovery_response->path, discovery_response->host,
                                  strlen(post_data), post_data
     );
-    send_buf[HTTP_POST_LEN] = 0;
-    IOTCONNECT_NRF_HTTP_RESPONSE response;
+    send_buf[http_post_len] = 0;
+    IotconnectNrfHttpResponse response;
     iotconnect_https_request(&response,
                              discovery_response->host,
                              TLS_SEC_TAG_IOTCONNECT_API,
@@ -157,10 +157,10 @@ static IOTCL_SyncResponse *run_http_sync(const char *cpid, const char *uniqueid)
         dump_response("WARN: Expected JSON to start immediately in the returned data.", &response);
     }
 
-    ret = IOTCL_DiscoveryParseSyncResponse(json_start);
+    ret = iotcl_discovery_parse_sync_response(json_start);
     if (!ret || ret->ds != IOTCL_SR_OK) {
         report_sync_error(ret, response.raw_response);
-        IOTCL_DiscoveryFreeSyncResponse(ret);
+        iotcl_discovery_free_sync_response(ret);
         ret = NULL;
     }
 
@@ -178,13 +178,13 @@ void iotc_on_mqtt_data(const uint8_t *data, size_t len, const char *topic) {
     memcpy(str, data, len);
     str[len] = 0;
     printk("event>>> %s\n", str);
-    if (!IOTCL_ProcessEvent(str)) {
+    if (!iotcl_process_event(str)) {
         printk("Error encountered while processing %s\n", str);
     }
     free(str);
 }
 
-static void on_iotconnect_status(IOT_CONNECT_STATUS status) {
+static void on_iotconnect_status(IotconnectConnectionStatus status) {
     if (config.status_cb) {
         config.status_cb(status);
     }
@@ -193,24 +193,24 @@ static void on_iotconnect_status(IOT_CONNECT_STATUS status) {
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Get All twin property from C2D
-void IotConnectSdk_Disconnect() {
+void iotconnect_sdk_disconnect() {
     printk("Disconnecting...\n");
     mqtt_disconnect(&client);
     k_msleep(100);
 }
 
-void IotConnectSdk_SendPacket(const char *data) {
+void iotconnect_sdk_send_packet(const char *data) {
     if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, 1, data, strlen(data))) {
         printk("\n\t Device_Attributes_Data Publish failure");
     }
 }
 
-static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type) {
+static void on_message_intercept(IotclEventData data, IotConnectEventType type) {
     switch (type) {
         case ON_FORCE_SYNC:
-            IotConnectSdk_Disconnect();
-            IOTCL_DiscoveryFreeDiscoveryResponse(discovery_response);
-            IOTCL_DiscoveryFreeSyncResponse(sync_response);
+            iotconnect_sdk_disconnect();
+            iotcl_discovery_free_discovery_response(discovery_response);
+            iotcl_discovery_free_sync_response(sync_response);
             sync_response = NULL;
             discovery_response = run_http_discovery(config.cpid, config.env);
             if (NULL == discovery_response) {
@@ -225,7 +225,7 @@ static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type
             (void) iotc_nrf_mqtt_init(&mqtt_config, sync_response);
         case ON_CLOSE:
             printk("Got a disconnect request. Closing the mqtt connection. Device restart is required.\n");
-            IotConnectSdk_Disconnect();
+            iotconnect_sdk_disconnect();
         default:
             break; // not handling nay other messages
     }
@@ -235,27 +235,27 @@ static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type
     }
 }
 
-void IotConnectSdk_Loop() {
+void iotconnect_sdk_loop() {
     iotc_nrf_mqtt_loop();
 }
 
-IOTCL_CONFIG *IotConnectSdk_GetLibConfig() {
-    return IOTCL_GetConfig();
+IotclConfig *iotconnect_sdk_get_lib_config() {
+    return iotcl_get_config();
 }
 
-IOTCONNECT_CLIENT_CONFIG *IotConnectSdk_InitAndGetConfig() {
+IotconnectClientConfig *iotconnect_sdk_init_and_get_config() {
     memset(&config, 0, sizeof(config));
     return &config;
 }
 
-bool IotConnectSdk_IsConnected() {
+bool iotconnect_sdk_is_connected() {
     return iotc_nrf_mqtt_is_connected();
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////////
 // this the Initialization os IoTConnect SDK
-int IotConnectSdk_Init() {
+int iotconnect_sdk_init() {
     if (!discovery_response) {
         discovery_response = run_http_discovery(config.cpid, config.env);
         if (NULL == discovery_response) {
@@ -297,7 +297,7 @@ int IotConnectSdk_Init() {
     // intercept internal processing and forward to client
     lib_config.event_functions.msg_cb = on_message_intercept;
 
-    if (!IOTCL_Init(&lib_config)) {
+    if (!iotcl_init(&lib_config)) {
         printk("Failed to initialize the IoTConnect Lib");
     }
 

@@ -12,7 +12,7 @@
 static sec_tag_t sec_tag_list[] = { TLS_SEC_TAG_IOTCONNECT_MQTT };
 #endif
 
-void NrfCertStore_ConfigureTls(struct mqtt_sec_config *tls_config) {
+void nrf_cert_store_configure_tls(struct mqtt_sec_config *tls_config) {
     tls_config->sec_tag_count = ARRAY_SIZE(sec_tag_list);
     tls_config->sec_tag_list = sec_tag_list;
 }
@@ -23,7 +23,7 @@ void NrfCertStore_ConfigureTls(struct mqtt_sec_config *tls_config) {
 
 ///////////////////////////////////////////////////////////////////////////////////
 /* Setup TLS options on a given socket */
-int NrfCertStore_ConfigureHttpsFd(sec_tag_t sec_tag, int fd) {
+int nrf_cert_store_configure_https_fd(sec_tag_t sec_tag, int fd) {
     int err;
     int verify;
 
@@ -49,11 +49,11 @@ int NrfCertStore_ConfigureHttpsFd(sec_tag_t sec_tag, int fd) {
 }
 
 
-int NrfCertStore_ConfigureApiFd(int fd) {
-    return NrfCertStore_ConfigureHttpsFd(TLS_SEC_TAG_IOTCONNECT_API, fd);
+int nrf_cert_store_configure_api_fd(int fd) {
+    return nrf_cert_store_configure_https_fd(TLS_SEC_TAG_IOTCONNECT_API, fd);
 }
 
-static int provision_ca_cert_if_no_exists(int sec_tag, char* cert) {
+static int provision_ca_cert_if_no_exists(int sec_tag, char *cert) {
     int err;
 
     bool exists = false;
@@ -90,15 +90,15 @@ static int provision_ca_cert_if_no_exists(int sec_tag, char* cert) {
 }
 
 /* Provision certificate to modem */
-int NrfCertStore_ProvisionApiCerts() {
+int nrf_cert_store_provision_api_certs() {
     return provision_ca_cert_if_no_exists(TLS_SEC_TAG_IOTCONNECT_API, CERT_GODADDY_INT_SECURE_G2);
 }
 
-int NrfCertStore_ProvisionOtaCerts() {
+int nrf_cert_store_provision_ota_certs() {
     return provision_ca_cert_if_no_exists(TLS_SEC_TAG_IOTCONNECT_OTA, CERT_BALTIMORE_ROOT_CA);
 }
 
-int NrfCertStore_SaveDeviceCert(const char *device_private_key, const char *device_cert) {
+int nrf_cert_store_save_device_cert(const char *device_private_key, const char *device_cert) {
     int err = 0;
 
     const char *certificates[] = {CERT_BALTIMORE_ROOT_CA,
@@ -115,7 +115,7 @@ int NrfCertStore_SaveDeviceCert(const char *device_private_key, const char *devi
     /* Delete certificates up to 5 certs from the modem storage for our sec key
      * in case there are any other remaining */
     for (int index = 0; index < 5; index++) {
-        (void)modem_key_mgmt_delete(TLS_SEC_TAG_IOTCONNECT_MQTT, index);
+        (void) modem_key_mgmt_delete(TLS_SEC_TAG_IOTCONNECT_MQTT, index);
         printk("modem_key_mgmt_delete(%d, %d) => result=%d\n",
                TLS_SEC_TAG_IOTCONNECT_MQTT, index, err);
     }
@@ -123,13 +123,13 @@ int NrfCertStore_SaveDeviceCert(const char *device_private_key, const char *devi
     /* Write certificates */
     for (enum modem_key_mgnt_cred_type type = 0; type < ARRAY_SIZE(credentials); type++) {
         err |= modem_key_mgmt_write(TLS_SEC_TAG_IOTCONNECT_MQTT, credentials[type],
-                                   certificates[type], strlen(certificates[type]));
+                                    certificates[type], strlen(certificates[type]));
         printk("modem_key_mgmt_write => result=%d\n", err);
     }
     return err;
 }
 
-int NrfCertStore_DeleteAllDeviceCerts() {
+int nrf_cert_store_delete_all_device_certs() {
     int err = 0;
 
     /* Delete certificates up to 5 certs from the modem storage for our sec key

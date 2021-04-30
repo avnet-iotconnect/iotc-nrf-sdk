@@ -19,7 +19,7 @@
 #define MAX_RECV_LEN 2048
 
 
-static int parse_response(IOTCONNECT_NRF_HTTP_RESPONSE *response,
+static int parse_response(IotconnectNrfHttpResponse *response,
                           char *recv_buff,
                           size_t recv_buff_len
 ) {
@@ -87,7 +87,7 @@ static int parse_response(IOTCONNECT_NRF_HTTP_RESPONSE *response,
 }
 
 void iotconnect_https_request(
-        IOTCONNECT_NRF_HTTP_RESPONSE *response,
+        IotconnectNrfHttpResponse *response,
         const char *host,
         sec_tag_t sec_tag,
         const char *send_str
@@ -126,7 +126,7 @@ void iotconnect_https_request(
         goto clean_up;
     }
 
-    err = NrfCertStore_ConfigureHttpsFd(sec_tag, fd);
+    err = nrf_cert_store_configure_https_fd(sec_tag, fd);
     if (err) {
         goto clean_up;
     }
@@ -198,7 +198,7 @@ void iotconnect_https_request(
     }
 }
 
-void iotconnect_free_https_response(IOTCONNECT_NRF_HTTP_RESPONSE *response) {
+void iotconnect_free_https_response(IotconnectNrfHttpResponse *response) {
     free(response->header);
     free(response->data);
     free(response->raw_response);

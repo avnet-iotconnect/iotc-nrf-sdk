@@ -17,7 +17,7 @@ extern "C" {
 /* SEC_TAG where mqtt connection certs are stored on the modem */
 #define TLS_SEC_TAG_IOTCONNECT_MQTT     10701
 
-    /* SEC_TAG where iotconnect API REST call certs are stored on the modem */
+/* SEC_TAG where iotconnect API REST call certs are stored on the modem */
 #define TLS_SEC_TAG_IOTCONNECT_API      10702
 
 /* SEC_TAG where OTA download certs are stored on the modem */
@@ -25,20 +25,20 @@ extern "C" {
 
 // App interface
 
-int NrfCertStore_ProvisionApiCerts(void);
+int nrf_cert_store_provision_api_certs(void);
 
-int NrfCertStore_ProvisionOtaCerts(void);
+int nrf_cert_store_provision_ota_certs(void);
 
-int NrfCertStore_SaveDeviceCert(const char *device_private_key, const char *device_cert);
+int nrf_cert_store_save_device_cert(const char *device_private_key, const char *device_cert);
 
-int NrfCertStore_DeleteAllDeviceCerts();
+int nrf_cert_store_delete_all_device_certs();
 
-int NrfCertStore_ConfigureHttpsFd(sec_tag_t sec_tag, int fd);
+int nrf_cert_store_configure_https_fd(sec_tag_t sec_tag, int fd);
 
 // IoTConnect API Interface
-int NrfCertStore_ConfigureApiFd(int fd);
+int nrf_cert_store_configure_api_fd(int fd);
 
-void NrfCertStore_ConfigureTls(struct mqtt_sec_config *tls_config);
+void nrf_cert_store_configure_tls(struct mqtt_sec_config *tls_config);
 
 #ifdef __cplusplus
 }
