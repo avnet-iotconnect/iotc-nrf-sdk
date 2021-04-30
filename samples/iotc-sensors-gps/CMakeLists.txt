@@ -56,7 +56,7 @@ cmake_policy(SET CMP0076 NEW)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
-project(iotconnect-sample)
+project(iotc-sensors-gps)
 zephyr_compile_definitions(PROJECT_NAME=${PROJECT_NAME})
 zephyr_compile_definitions(_POSIX_C_SOURCE=200809L)
 

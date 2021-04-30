@@ -12,7 +12,6 @@
 #include <zephyr.h>
 #include <modem/bsdlib.h>
 #include <modem/lte_lc.h>
-#include <modem/at_cmd.h>
 
 #include <power/reboot.h>
 #include <dfu/mcuboot.h>
@@ -48,7 +47,7 @@ static char duid[30] = "nrf-dk-test"; // When using this code, your device ID wi
 static char *cpid = CONFIG_IOTCONNECT_CPID;
 static char *env = CONFIG_IOTCONNECT_ENV;
 
-static IOTCONNECT_NRF_FOTA_CONFIG fota_config = {0};
+static IotconnectNrfFotaConfig fota_config = {0};
 
 // Various flags that drive the behavior of main loop
 static bool sdk_running = false;
@@ -140,13 +139,13 @@ static int start_ota(char *url) {
     return -EINVAL;
 }
 
-static void on_ota(IOTCL_EVENT_DATA data) {
+static void on_ota(IotclEventData data) {
     const char *message = NULL;
-    char *url = IOTCL_CloneDownloadUrl(data, 0);
+    char *url = iotcl_clone_download_url(data, 0);
     bool success = false;
     if (NULL != url) {
         printk("Download URL is: %s\n", url);
-        const char *version = IOTCL_CloneSwVersion(data);
+        const char *version = iotcl_clone_sw_version(data);
         if (is_app_version_same_as_ota(version)) {
             printk("OTA request for same version %s. Sending success\n", version);
             success = true;
@@ -179,7 +178,7 @@ static void on_ota(IOTCL_EVENT_DATA data) {
     } else {
         // compatibility with older events
         // This app does not support FOTA with older back ends, but the user can add the functionality
-        const char *command = IOTCL_CloneCommand(data);
+        const char *command = iotcl_clone_command(data);
         if (NULL != command) {
             // URL will be inside the command
             printk("Command is: %s\n", command);
@@ -187,16 +186,16 @@ static void on_ota(IOTCL_EVENT_DATA data) {
             free((void *) command);
         }
     }
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, success, message);
+    const char *ack = iotcl_create_ack_string_and_destroy_event(data, success, message);
     if (NULL != ack) {
         printk("Sent OTA ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
+        iotconnect_sdk_send_packet(ack);
         free((void *) ack);
     }
 }
 
-static void on_command(IOTCL_EVENT_DATA data) {
-    char *command = IOTCL_CloneCommand(data);
+static void on_command(IotclEventData data) {
+    char *command = iotcl_clone_command(data);
     if (NULL != command) {
         printk("Received command: %s\n", command);
         process_command(data, command);
@@ -206,7 +205,7 @@ static void on_command(IOTCL_EVENT_DATA data) {
     }
 }
 
-static void on_connection_status(IOT_CONNECT_STATUS status) {
+static void on_connection_status(IotconnectConnectionStatus status) {
     // Add your own status handling
     switch (status) {
         case MQTT_CONNECTED:
@@ -233,39 +232,39 @@ static void on_connection_status(IOT_CONNECT_STATUS status) {
 }
 
 static void publish_telemetry() {
-    IOTCL_MESSAGE_HANDLE msg = IOTCL_TelemetryCreate(IotConnectSdk_GetLibConfig());
+    IotclMessageHandle msg = iotcl_telemetry_create(iotconnect_sdk_get_lib_config());
 
     // Optional. The first time you create a data point, the current timestamp will be automatically added
     // TelemetryAddWith* calls are only required if sending multiple data points in one packet.
-    IOTCL_TelemetryAddWithIsoTime(msg, IOTCL_IsoTimestampNow());
-    IOTCL_TelemetrySetString(msg, "version", MAIN_APP_VERSION);
-    IOTCL_TelemetrySetString(msg, "api_version", SDK_VERSION);
+    iotcl_telemetry_add_with_iso_time(msg, iotcl_iso_timestamp_now());
+    iotcl_telemetry_set_string(msg, "version", MAIN_APP_VERSION);
+    iotcl_telemetry_set_string(msg, "api_version", SDK_VERSION);
 
-    IOTCL_TelemetrySetNumber(msg, "cpu", 33);
+    iotcl_telemetry_set_number(msg, "cpu", 33);
 
     {
         light_sensor_data_t ld = {0};
         if (0 == light_sensor_get_data(&ld)) {
-            IOTCL_TelemetrySetNumber(msg, "ls_red", ld.red);
-            IOTCL_TelemetrySetNumber(msg, "ls_green", ld.green);
-            IOTCL_TelemetrySetNumber(msg, "ls_blue", ld.blue);
-            IOTCL_TelemetrySetNumber(msg, "ls_ir", ld.ir);
+            iotcl_telemetry_set_number(msg, "ls_red", ld.red);
+            iotcl_telemetry_set_number(msg, "ls_green", ld.green);
+            iotcl_telemetry_set_number(msg, "ls_blue", ld.blue);
+            iotcl_telemetry_set_number(msg, "ls_ir", ld.ir);
         }
     }
     {
         env_sensor_data_t ed = {0};
         if (0 == env_sensors_get_data(&ed)) {
-            IOTCL_TelemetrySetNumber(msg, "es_temp", ed.temperature);
-            IOTCL_TelemetrySetNumber(msg, "es_humid", ed.humidity);
-            IOTCL_TelemetrySetNumber(msg, "es_pres", ed.pressure);
+            iotcl_telemetry_set_number(msg, "es_temp", ed.temperature);
+            iotcl_telemetry_set_number(msg, "es_humid", ed.humidity);
+            iotcl_telemetry_set_number(msg, "es_pres", ed.pressure);
         }
     }
     {
         motion_data_t md = {0};
         if (0 == accelerometer_get_data(&md)) {
-            IOTCL_TelemetrySetNumber(msg, "ms_x", md.acceleration.x);
-            IOTCL_TelemetrySetNumber(msg, "ms_y", md.acceleration.y);
-            IOTCL_TelemetrySetNumber(msg, "ms_z", md.acceleration.z);
+            iotcl_telemetry_set_number(msg, "ms_x", md.acceleration.x);
+            iotcl_telemetry_set_number(msg, "ms_y", md.acceleration.y);
+            iotcl_telemetry_set_number(msg, "ms_z", md.acceleration.z);
             char *orientation = "unknown";
             switch (md.orientation) {
                 case MOTION_ORIENTATION_NORMAL:
@@ -280,20 +279,19 @@ static void publish_telemetry() {
                 default:
                     break;
             }
-            IOTCL_TelemetrySetString(msg, "ms_orientation", orientation);
+            iotcl_telemetry_set_string(msg, "ms_orientation", orientation);
         }
 
         if (gps_lat != INVALID_LAT_LON && gps_lng != INVALID_LAT_LON) {
-            IOTCL_TelemetrySetNumber(msg, "gps_lat", gps_lat);
-            IOTCL_TelemetrySetNumber(msg, "gps_lng", gps_lng);
+            iotcl_telemetry_set_number(msg, "gps_lat", gps_lat);
+            iotcl_telemetry_set_number(msg, "gps_lng", gps_lng);
         }
     }
-
-    const char *str = IOTCL_CreateSerializedString(msg, false);
-    IOTCL_TelemetryDestroy(msg);
+    const char *str = iotcl_create_serialized_string(msg, false);
+    iotcl_telemetry_destroy(msg);
     printk("Sending: %s\n", str);
-    IotConnectSdk_SendPacket(str);
-    IOTCL_DestroySerialized(str);
+    iotconnect_sdk_send_packet(str);
+    iotcl_destroy_serialized(str);
 }
 
 static int time_init() {
@@ -367,7 +365,7 @@ static int sdk_run() {
         return -EINVAL;
     }
 
-    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
+    IotconnectClientConfig *config = iotconnect_sdk_init_and_get_config();
     config->cpid = cpid;
     config->duid = duid;
     config->env = env;
@@ -375,7 +373,7 @@ static int sdk_run() {
     config->ota_cb = on_ota;
     config->status_cb = on_connection_status;
     // From here start the IoTConnect SDK
-    int result = IotConnectSdk_Init();
+    int result = iotconnect_sdk_init();
     if (0 != result) {
         printk("Failed to initialize the SDK\n");
         sdk_running = false;
@@ -387,16 +385,17 @@ static int sdk_run() {
     time_t last_send_time = now - CONFIG_TELEMETRY_SEND_INTERVAL_SECS; // send data every 10 seconds
     time_t stop_send_time = now + 60 * CONFIG_TELEMETRY_DURATION_MINUTES; // stop sending after a few minutes
 
+    gps_control_start();
     k_msleep(1000);
 
     do {
-        IotConnectSdk_Loop();
+        iotconnect_sdk_loop();
         if (sdk_do_shutdown) {
             sdk_do_shutdown = false;
             break;
         }
         now = time(NULL);
-        if (IotConnectSdk_IsConnected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
+        if (iotconnect_sdk_is_connected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
             last_send_time = now;
             if (!fota_in_progress) {
                 publish_telemetry();
@@ -412,9 +411,9 @@ static int sdk_run() {
     } while (CONFIG_TELEMETRY_DURATION_MINUTES >= 0 && now < stop_send_time);
 
     // this function will stop the IoTConnect SDK
-    IotConnectSdk_Disconnect();
+    iotconnect_sdk_disconnect();
     k_msleep(CONFIG_MAIN_LOOP_INTERVAL_MS);
-    IotConnectSdk_Loop();
+    iotconnect_sdk_loop();
     k_msleep(CONFIG_MAIN_LOOP_INTERVAL_MS);
     if (!fota_in_progress) {
         // special case. don't go offline here. let fota do its thing
@@ -622,13 +621,13 @@ void main(void) {
 #endif
     gps_control_init(gps_evt_handler);
 
-    err = NrfCertStore_ProvisionApiCerts();
+    err = nrf_cert_store_provision_api_certs();
     if (err) {
         printk("Failed to provision API certificates!\n");
         return;
     }
 
-    err = NrfCertStore_ProvisionOtaCerts();
+    err = nrf_cert_store_provision_ota_certs();
     if (err) {
         printk("Failed to provision OTA certificates!\n");
         return;
@@ -660,18 +659,18 @@ void main(void) {
     }
 
 #if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
-        /*
-        if(NrfCertStore_DeleteAllDeviceCerts()) {
-            printk("Failed to delete device certs\n");
-        } else {
-            printk("Device certs deleted\n");
-        }
-         */
-        if (program_test_certs(env, imei)) {
-            printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
-        } else {
-            printk("Device provisioned successfully\n");
-        }
+    /*
+    if(nrf_cert_store_delete_all_device_certs()) {
+        printk("Failed to delete device certs\n");
+    } else {
+        printk("Device certs deleted\n");
+    }
+     */
+    if (program_test_certs(env, imei)) {
+        printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
+    } else {
+        printk("Device provisioned successfully\n");
+    }
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);

@@ -40,7 +40,7 @@ static char duid[30] = "nrf-dk-test"; // When using this code, your device ID wi
 static char *cpid = CONFIG_IOTCONNECT_CPID;
 static char *env = CONFIG_IOTCONNECT_ENV;
 
-static IOTCONNECT_NRF_FOTA_CONFIG fota_config = {0};
+static IotconnectNrfFotaConfig fota_config = {0};
 
 // Various flags that drive the behavior of main loop
 static bool sdk_running = false;
@@ -50,6 +50,7 @@ static bool do_reboot = false;
 static bool fota_in_progress = false;
 
 #if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
+
 /* Initialize AT communications */
 static int at_comms_init(void) {
     int err;
@@ -65,6 +66,7 @@ static int at_comms_init(void) {
     }
     return 0;
 }
+
 #endif
 
 static bool is_app_version_same_as_ota(const char *version) {
@@ -120,13 +122,13 @@ static int start_ota(char *url) {
     return -EINVAL;
 }
 
-static void on_ota(IOTCL_EVENT_DATA data) {
+static void on_ota(IotclEventData data) {
     const char *message = NULL;
-    char *url = IOTCL_CloneDownloadUrl(data, 0);
+    char *url = iotcl_clone_download_url(data, 0);
     bool success = false;
     if (NULL != url) {
         printk("Download URL is: %s\n", url);
-        const char *version = IOTCL_CloneSwVersion(data);
+        const char *version = iotcl_clone_sw_version(data);
         if (is_app_version_same_as_ota(version)) {
             printk("OTA request for same version %s. Sending success\n", version);
             success = true;
@@ -145,7 +147,8 @@ static void on_ota(IOTCL_EVENT_DATA data) {
                 return;
             }
         } else {
-            printk("Device firmware version %s is newer than OTA version %s. Sending failure\n", MAIN_APP_VERSION, version);
+            printk("Device firmware version %s is newer than OTA version %s. Sending failure\n", MAIN_APP_VERSION,
+                   version);
             // Not sure what to do here. The app version is better than OTA version.
             // Probably a development version, so return failure?
             // The user should decide here.
@@ -158,7 +161,7 @@ static void on_ota(IOTCL_EVENT_DATA data) {
     } else {
         // compatibility with older events
         // This app does not support FOTA with older back ends, but the user can add the functionality
-        const char *command = IOTCL_CloneCommand(data);
+        const char *command = iotcl_clone_command(data);
         if (NULL != command) {
             // URL will be inside the command
             printk("Command is: %s\n", command);
@@ -166,31 +169,31 @@ static void on_ota(IOTCL_EVENT_DATA data) {
             free((void *) command);
         }
     }
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, success, message);
+    const char *ack = iotcl_create_ack_string_and_destroy_event(data, success, message);
     if (NULL != ack) {
         printk("Sent OTA ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
+        iotconnect_sdk_send_packet(ack);
         free((void *) ack);
     }
 }
 
-static void on_command(IOTCL_EVENT_DATA data) {
-    const char *command = IOTCL_CloneCommand(data);
+static void on_command(IotclEventData data) {
+    const char *command = iotcl_clone_command(data);
     if (NULL != command) {
         printk("Received command: %s\n", command);
         free((void *) command);
     }
-    const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, false, "Not implemented");
+    const char *ack = iotcl_create_ack_string_and_destroy_event(data, false, "Not implemented");
     if (NULL != ack) {
         printk("Sent CMD ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
+        iotconnect_sdk_send_packet(ack);
         free((void *) ack);
     } else {
         printk("Error while creating the ack JSON");
     }
 }
 
-static void on_connection_status(IOT_CONNECT_STATUS status) {
+static void on_connection_status(IotconnectConnectionStatus status) {
     // Add your own status handling
     switch (status) {
         case MQTT_CONNECTED:
@@ -217,22 +220,22 @@ static void on_connection_status(IOT_CONNECT_STATUS status) {
 }
 
 static void publish_telemetry() {
-    IOTCL_MESSAGE_HANDLE msg = IOTCL_TelemetryCreate(IotConnectSdk_GetLibConfig());
+    IotclMessageHandle msg = iotcl_telemetry_create(iotconnect_sdk_get_lib_config());
 
     // Optional. The first time you create a data point, the current timestamp will be automatically added
     // TelemetryAddWith* calls are only required if sending multiple data points in one packet.
-    IOTCL_TelemetryAddWithIsoTime(msg, IOTCL_IsoTimestampNow());
-    IOTCL_TelemetrySetString(msg, "version", MAIN_APP_VERSION);
-    IOTCL_TelemetrySetString(msg, "api_version", SDK_VERSION);
+    iotcl_telemetry_add_with_iso_time(msg, iotcl_iso_timestamp_now());
+    iotcl_telemetry_set_string(msg, "version", MAIN_APP_VERSION);
+    iotcl_telemetry_set_string(msg, "api_version", SDK_VERSION);
 
     // Simulated value
-    IOTCL_TelemetrySetNumber(msg, "cpu", time(NULL) % 100);
+    iotcl_telemetry_set_number(msg, "cpu", time(NULL) % 100);
 
-    const char *str = IOTCL_CreateSerializedString(msg, false);
-    IOTCL_TelemetryDestroy(msg);
+    const char *str = iotcl_create_serialized_string(msg, false);
+    iotcl_telemetry_destroy(msg);
     printk("Sending: %s\n", str);
-    IotConnectSdk_SendPacket(str);
-    IOTCL_DestroySerialized(str);
+    iotconnect_sdk_send_packet(str);
+    iotcl_destroy_serialized(str);
 }
 
 static int time_init() {
@@ -281,7 +284,7 @@ static int sdk_run() {
         return -EINVAL;
     }
 
-    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
+    IotconnectClientConfig *config = iotconnect_sdk_init_and_get_config();
     config->cpid = cpid;
     config->duid = duid;
     config->env = env;
@@ -289,7 +292,7 @@ static int sdk_run() {
     config->ota_cb = on_ota;
     config->status_cb = on_connection_status;
     // From here start the IoTConnect SDK
-    int result = IotConnectSdk_Init();
+    int result = iotconnect_sdk_init();
     if (0 != result) {
         printk("Failed to initialize the SDK\n");
         sdk_running = false;
@@ -304,13 +307,13 @@ static int sdk_run() {
     k_msleep(1000);
 
     do {
-        IotConnectSdk_Loop();
+        iotconnect_sdk_loop();
         if (sdk_do_shutdown) {
             sdk_do_shutdown = false;
             break;
         }
         now = time(NULL);
-        if (IotConnectSdk_IsConnected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
+        if (iotconnect_sdk_is_connected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
             last_send_time = now;
             if (!fota_in_progress) {
                 publish_telemetry();
@@ -326,9 +329,9 @@ static int sdk_run() {
     } while (CONFIG_TELEMETRY_DURATION_MINUTES >= 0 && now < stop_send_time);
 
     // this function will stop the IoTConnect SDK
-    IotConnectSdk_Disconnect();
+    iotconnect_sdk_disconnect();
     k_msleep(CONFIG_MAIN_LOOP_INTERVAL_MS);
-    IotConnectSdk_Loop();
+    iotconnect_sdk_loop();
     k_msleep(CONFIG_MAIN_LOOP_INTERVAL_MS);
     if (!fota_in_progress) {
         // special case. don't go offline here. let fota do its thing
@@ -367,11 +370,11 @@ void main(void) {
     err = bsdlib_init();
 #else
     /* If bsdlib is initialized on post-kernel we should
-	 * fetch the returned error code instead of bsdlib_init
-	 */
-	err = bsdlib_get_init_ret();
+     * fetch the returned error code instead of bsdlib_init
+     */
+    err = bsdlib_get_init_ret();
 #endif
-	if (err) {
+    if (err) {
         printk("Failed to initialize bsdlib!\n");
         return;
     }
@@ -384,13 +387,13 @@ void main(void) {
     }
 #endif
 
-    err = NrfCertStore_ProvisionApiCerts();
+    err = nrf_cert_store_provision_api_certs();
     if (err) {
         printk("Failed to provision API certificates!\n");
         return;
     }
 
-    err = NrfCertStore_ProvisionOtaCerts();
+    err = nrf_cert_store_provision_ota_certs();
     if (err) {
         printk("Failed to provision OTA certificates!\n");
         return;
@@ -416,18 +419,18 @@ void main(void) {
     }
 
 #if defined(CONFIG_PROVISION_TEST_CERTIFICATES)
-    /*
-    if(NrfCertStore_DeleteAllDeviceCerts()) {
-        printk("Failed to delete device certs\n");
-    } else {
-        printk("Device certs deleted\n");
-    }
-     */
-    if (program_test_certs(env, imei)) {
-        printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
-    } else {
-        printk("Device provisioned successfully\n");
-    }
+        /*
+        if(NrfCertStore_DeleteAllDeviceCerts()) {
+            printk("Failed to delete device certs\n");
+        } else {
+            printk("Device certs deleted\n");
+        }
+         */
+        if (program_test_certs(env, imei)) {
+            printk("Failed program certs. Error was %d. Assuming certs are already programmed.\n", err);
+        } else {
+            printk("Device provisioned successfully\n");
+        }
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);

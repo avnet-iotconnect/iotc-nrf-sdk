@@ -14,8 +14,8 @@
 extern "C" {
 #endif
 
-void command_status(IOTCL_EVENT_DATA data, bool status, const char *command_name, const char *message);
-void process_command(IOTCL_EVENT_DATA data, char *args);
+void command_status(IotclEventData data, bool status, const char *command_name, const char *message);
+void process_command(IotclEventData data, char *args);
 
 #ifdef __cplusplus
 }

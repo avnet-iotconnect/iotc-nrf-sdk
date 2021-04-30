@@ -18,17 +18,16 @@
 
 #include "iotconnect_mqtt.h"
 #include "iotconnect.h"
-#include "iotconnect_sdk_internal.h"
 #include "nrf_cert_store.h"
 
 
 extern struct mqtt_client client;
-static IOTCONNECT_MQTT_CONFIG *config;
+static IotconnectMqttConfig *config;
 static unsigned int rolling_message_id = 1;
 #if 1 //was_mod
 static struct mqtt_utf8 mqtt_user_name;
 #endif
-static IOTCL_SyncResponse* sync_response;
+static IotclSyncResponse *sync_response;
 static u8_t tx_buffer[MAXLINE];
 static u8_t rx_buffer[MAXLINE];
 static u8_t payload_buf[MAXLINE];
@@ -37,7 +36,6 @@ static struct sockaddr_storage broker;
 
 
 static bool connected = false;
-
 
 
 static int subscribe(void);
@@ -210,7 +208,7 @@ static bool client_init() {
 
     tls_config->cipher_count = 0;
     tls_config->cipher_list = NULL;
-    NrfCertStore_ConfigureTls(tls_config);
+    nrf_cert_store_configure_tls(tls_config);
     tls_config->hostname = sync_response->broker.host;
 
 #else
@@ -364,7 +362,7 @@ bool iotc_nrf_mqtt_is_connected() {
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Start the MQTT protocol
-bool iotc_nrf_mqtt_init(IOTCONNECT_MQTT_CONFIG *c, IOTCL_SyncResponse* sr) {
+bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
 
     int err;
 
@@ -373,7 +371,7 @@ bool iotc_nrf_mqtt_init(IOTCONNECT_MQTT_CONFIG *c, IOTCL_SyncResponse* sr) {
     }
 
     if (!sr || IOTCL_SR_OK != sr->ds) {
-        IOTCL_DiscoveryFreeSyncResponse(sr);
+        iotcl_discovery_free_sync_response(sr);
         return false;
     }
 
@@ -381,7 +379,7 @@ bool iotc_nrf_mqtt_init(IOTCONNECT_MQTT_CONFIG *c, IOTCL_SyncResponse* sr) {
     config = c;
 
     if (!client_init()) {
-        return  -1;
+        return -1;
     }
 
     err = mqtt_connect(&client);
