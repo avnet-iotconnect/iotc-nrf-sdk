@@ -1,6 +1,7 @@
 //
 // Copyright: Avnet, Softweb Inc. 2020
 // Modified by nmarkovi on 6/15/20.
+// Modified by Alan Low <alan.low@avnet.com> on 4/28/21.
 //
 
 
@@ -21,6 +22,27 @@
 #include "iotconnect_sdk_internal.h"
 #include "nrf_cert_store.h"
 
+typedef struct
+{
+    uint32_t msg_id;
+    uint32_t start_ticks;
+
+} msg_wait_puback_t;
+
+typedef struct msg_wait_puback_list msg_wait_puback_list_t;
+
+struct msg_wait_puback_list
+{
+    msg_wait_puback_t msg_wait_puback;
+    msg_wait_puback_list_t *p_prev;
+    msg_wait_puback_list_t *p_next;
+
+};
+
+static msg_wait_puback_list_t msg_wait_puback_list_head = {
+    .p_prev = NULL,
+    .p_next = NULL
+};
 
 extern struct mqtt_client client;
 static IOTCONNECT_MQTT_CONFIG *config;
@@ -35,10 +57,7 @@ static u8_t payload_buf[MAXLINE];
 static struct pollfd fds;
 static struct sockaddr_storage broker;
 
-
 static bool connected = false;
-
-
 
 static int subscribe(void);
 
@@ -50,10 +69,141 @@ static int fds_init(struct mqtt_client *c);
 
 static void mqtt_evt_handler(struct mqtt_client *const c, const struct mqtt_evt *evt);
 
+/********************************************************************/
+/* Function to add msg ID to the list.                              */
+/********************************************************************/
+static bool msg_wait_puback_list_add(uint32_t msg_id) {
+
+    bool res = false;
+
+    msg_wait_puback_list_t *p = &msg_wait_puback_list_head;
+    msg_wait_puback_list_t *p_new = (msg_wait_puback_list_t *)malloc(sizeof(msg_wait_puback_list_t));
+
+    if (p_new) {
+        res = true;
+        p_new->msg_wait_puback.msg_id = msg_id;
+        p_new->msg_wait_puback.start_ticks = k_uptime_get_32();
+        p_new->p_next = NULL;
+
+        while (p) {
+            if (p->p_next == NULL) {
+                p->p_next = p_new;
+                p_new->p_prev = p;
+                break;
+            } else {
+                p = p->p_next;
+            }
+        }
+
+        //printk("Message Id \"%u\" added to list\n", msg_id);
+
+    } else {
+        printk("ERR: Unable to allocate memory for msg wait puback list!\n");
+    }
+
+    return res;
+}
+
+/********************************************************************/
+/* Function to remove msg ID from the list.                         */
+/********************************************************************/
+static bool msg_wait_puback_list_delete(uint32_t msg_id) {
+
+    msg_wait_puback_list_t *p = msg_wait_puback_list_head.p_next;
+
+    while (p) {
+        if (p->msg_wait_puback.msg_id && (p->msg_wait_puback.msg_id == msg_id)) {
+            p->p_prev->p_next = p->p_next;
+            if (p->p_next) {
+                p->p_next->p_prev = p->p_prev;
+            }
+            free(p);
+            //printk("Message Id \"%u\" deleted from list\n", msg_id);
+            return true;
+        } else {
+            p = p->p_next;
+        }
+    }
+    return false;
+}
+
+/********************************************************************/
+/* Function to clear the list.                                      */
+/********************************************************************/
+static void msg_wait_puback_list_clear(void) {
+
+    msg_wait_puback_list_t *p = msg_wait_puback_list_head.p_next;
+
+    while (msg_wait_puback_list_head.p_next) {
+        p = msg_wait_puback_list_head.p_next;
+        p->p_prev->p_next = p->p_next;
+        if (p->p_next) {
+            p->p_next->p_prev = p->p_prev;
+        }
+        free(p);
+    }
+
+    //printk("list cleared.\n");
+
+}
+
+/********************************************************************/
+/* Function to find msg ID from the list.                           */
+/********************************************************************/
+static bool msg_wait_puback_list_find(uint32_t msg_id) {
+
+    msg_wait_puback_list_t *p = msg_wait_puback_list_head.p_next;
+    bool found = false;
+
+    while (p) {
+        if (p->msg_wait_puback.msg_id && (p->msg_wait_puback.msg_id == msg_id)) {
+            found = true;
+            break;
+        }
+        p = p->p_next;
+    }
+
+    if (!found) {
+        printk("Message Id \"%u\" NOT found in list\n", msg_id);
+    }
+
+    return found;
+
+}
+
+/********************************************************************/
+/* Function to handle timeout of all msg ID in the list.            */
+/********************************************************************/
+static void msg_wait_puback_list_timeout_handling_proc(void) {
+
+    msg_wait_puback_list_t *p = msg_wait_puback_list_head.p_next;
+    uint32_t msg_id;
+
+    while(p){
+        if (p->msg_wait_puback.msg_id &&
+            ((k_uptime_get_32() - p->msg_wait_puback.start_ticks) >= (config->puback_timeout_cfg.timeout_s * 1000))) {
+
+            printk("Message Id \"%d\" timeout %d secs\n", p->msg_wait_puback.msg_id,
+                (k_uptime_get_32() - p->msg_wait_puback.start_ticks)/1000);
+
+            msg_id = p->msg_wait_puback.msg_id;
+            msg_wait_puback_list_delete(msg_id);
+
+            if(config->puback_timeout_cfg.cb){
+                config->puback_timeout_cfg.cb(msg_id);
+            }
+            p = msg_wait_puback_list_head.p_next;
+
+        } else {
+            p = p->p_next;
+        }
+    }
+}
 
 static unsigned int get_next_message_id() {
+
     if (rolling_message_id + 1 >= UINT_MAX) {
-        rolling_message_id = 0;
+        rolling_message_id = 1;
     }
     return rolling_message_id++;
 }
@@ -223,7 +373,7 @@ static bool client_init() {
 /**@brief Function to publish data on the configured topic
  */
 int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos,
-                          const uint8_t *data, size_t len) {
+                          const uint8_t *data, size_t len, uint32_t *msg_id) {
     struct mqtt_publish_param param;
 
     param.message.topic.qos = qos;
@@ -235,9 +385,23 @@ int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qo
     param.dup_flag = 0;
     param.retain_flag = 0;
 
+    //Add msg ID to list if QoS = 1.
+    if (param.message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) {
+        msg_wait_puback_list_add(param.message_id);
+    }
+
+    //return msg Id if msg_id pointer is available.
+    if (msg_id) {
+        *msg_id = param.message_id;
+    }
+
     int code = mqtt_publish(c, &param);
     if (code != 0) {
-        printf("data_publish error: %d", code);
+        printf("data_publish error: %d\n", code);
+        //remove msg ID from list if QoS = 1.
+        if (param.message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) {
+            msg_wait_puback_list_delete(param.message_id);
+        }
     }
     return code;
 }
@@ -266,7 +430,7 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
 
         case MQTT_EVT_DISCONNECT:
             printk("MQTT client disconnected %d\n", evt->result);
-
+            fds.fd = -1;
             connected = false;
             if (config->status_cb) {
                 config->status_cb(MQTT_DISCONNECTED);
@@ -304,7 +468,13 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
                 break;
             }
 
-            printk("Packet id: %u acknowledged\n", evt->param.puback.message_id);
+            //printk("Packet id: %u acknowledged\n", evt->param.puback.message_id);
+
+            //Remove message Id from list if found.
+            if (msg_wait_puback_list_find(evt->param.puback.message_id)) {
+                msg_wait_puback_list_delete(evt->param.puback.message_id);
+            }
+
             break;
 
         case MQTT_EVT_SUBACK:
@@ -377,6 +547,7 @@ bool iotc_nrf_mqtt_init(IOTCONNECT_MQTT_CONFIG *c, IOTCL_SyncResponse* sr) {
         return false;
     }
 
+    fds.fd = -1;
     sync_response = sr;
     config = c;
 
@@ -404,6 +575,14 @@ bool iotc_nrf_mqtt_init(IOTCONNECT_MQTT_CONFIG *c, IOTCL_SyncResponse* sr) {
 // MQTT will work in while loop
 void iotc_nrf_mqtt_loop(void) {
     int err;
+
+    //handle message acknowledge timeout
+    msg_wait_puback_list_timeout_handling_proc();
+
+    //if no FD return.
+    if (fds.fd == -1) {
+        return;
+    }
 
     err = poll(&fds, 1, 10);
     if (err < 0) {
@@ -437,4 +616,18 @@ void iotc_nrf_mqtt_loop(void) {
         printk("POLLNVAL\n");
         return;
     }
+}
+
+void iotc_nrf_mqtt_disconnect() {
+
+    mqtt_disconnect(&client);
+    //clear list.
+    msg_wait_puback_list_clear();
+}
+
+void iotc_nrf_mqtt_abort() {
+
+    mqtt_abort(&client);
+    //clear list.
+    msg_wait_puback_list_clear();
 }
