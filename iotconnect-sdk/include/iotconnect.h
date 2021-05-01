@@ -1,6 +1,7 @@
 //
 // Copyright: Avnet, Softweb Inc. 2020
 // Modified by nmarkovi on 6/15/20.
+// Modified by Alan Low <alan.low@avnet.com> on 4/28/21.
 //
 
 #ifndef IOTCONNECT_H
@@ -29,6 +30,8 @@ typedef enum {
 
 typedef void (*IOT_CONNECT_STATUS_CB)(IOT_CONNECT_STATUS data);
 
+typedef void (*IOT_CONNECT_MSG_ACK_TIMEOUT_CB)(uint32_t msg_id);
+
 typedef struct {
 
     char *env;    // Environment name. Contact your representative for details.
@@ -44,6 +47,7 @@ typedef struct {
     IOTCL_COMMAND_CALLBACK cmd_cb; // callback for command events.
     IOTCL_MESSAGE_CALLBACK msg_cb; // callback for ALL messages, including the specific ones like cmd or ota callback.
     IOT_CONNECT_STATUS_CB status_cb; // callback for connection status
+    IOT_CONNECT_MSG_ACK_TIMEOUT_CB msg_ack_timeout_cb; //callback for message acknowledge timeout.
 } IOTCONNECT_CLIENT_CONFIG;
 
 
@@ -55,11 +59,15 @@ bool IotConnectSdk_IsConnected();
 
 IOTCL_CONFIG *IotConnectSdk_GetLibConfig();
 
-void IotConnectSdk_SendPacket(const char *data);
+bool IotConnectSdk_SendPacket(const char *data, uint32_t *msg_id);
 
 void IotConnectSdk_Loop();
 
 void IotConnectSdk_Disconnect();
+
+int IotConnectSdk_Connect();
+
+int IotConnectSdk_Abort();
 
 #ifdef __cplusplus
 }
