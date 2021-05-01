@@ -3,6 +3,7 @@
 //
 // Copyright: Avnet, Softweb Inc. 2020
 // Modified by Nik Markovic <nikola.markovic@avnet.com> on 6/15/20.
+// Modified by Alan Low <alan.low@avnet.com> on 4/28/21.
 //
 
 #include <stdlib.h>
@@ -48,7 +49,8 @@ static bool sdk_do_run = true;    // trigger running of the SDK - by default and
 static bool sdk_do_shutdown = false;  // trigger stopping of the SDK loop
 static bool do_reboot = false;
 static bool fota_in_progress = false;
-
+static bool sdk_initialized = false;
+static bool lte_link_up = false;
 #if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
 /* Initialize AT communications */
 static int at_comms_init(void) {
@@ -73,6 +75,104 @@ static bool is_app_version_same_as_ota(const char *version) {
 
 static bool app_needs_ota_update(const char *version) {
     return strcmp(MAIN_APP_VERSION, version) < 0;
+}
+
+static void nrf_lte_evt_cb(const struct lte_lc_evt *const evt){
+
+    static enum lte_lc_nw_reg_status s_lte_nw_reg_status = LTE_LC_NW_REG_UNKNOWN;
+
+    switch(evt->type){
+
+        case LTE_LC_EVT_NW_REG_STATUS:
+
+            printk("LTE_LC_EVT_NW_REG_STATUS: %d\n", evt->nw_reg_status);
+            s_lte_nw_reg_status = evt->nw_reg_status;
+
+            switch((int)evt->nw_reg_status){
+
+                case LTE_LC_NW_REG_REGISTERED_HOME:
+                case LTE_LC_NW_REG_REGISTERED_ROAMING:
+                    lte_link_up = true;
+                    printk("LTE network established\n");
+                    break;
+
+                case LTE_LC_NW_REG_SEARCHING:
+                    lte_link_up = false;
+                    printk("LTE network searching...\n");
+                    break;
+
+                case LTE_LC_NW_REG_NOT_REGISTERED:
+                    lte_link_up = false;
+                    printk("LTE network disconnected\n");
+                    break;
+
+                case LTE_LC_NW_REG_REGISTRATION_DENIED:
+                    lte_link_up = false;
+                    printk("LTE network establish denied\n");
+                    break;
+
+                case LTE_LC_NW_REG_UNKNOWN:
+                    lte_link_up = false;
+                    printk("LTE network status unknown\n");
+                    break;
+
+                case LTE_LC_NW_REG_REGISTERED_EMERGENCY:
+                    lte_link_up = false;
+                    printk("LTE emergency network established\n");
+                    break;
+        
+                case LTE_LC_NW_REG_UICC_FAIL:
+                    lte_link_up = false;
+                    printk("SIM card UICC read fail\n");
+                    break;
+            }
+            break;
+
+        case LTE_LC_EVT_PSM_UPDATE:
+            printk("PSM update: active time => %d, TAU => %d\n", evt->psm_cfg.active_time, evt->psm_cfg.tau);
+            break;
+
+        case LTE_LC_EVT_EDRX_UPDATE:
+            printk("eDRX update: eDRX => %fs, PTW => %fs\n", evt->edrx_cfg.edrx, evt->edrx_cfg.ptw);
+            break;
+
+        case LTE_LC_EVT_RRC_UPDATE:
+            printk("RRC update: mode => %s\n", (evt->rrc_mode == LTE_LC_RRC_MODE_IDLE ? "idle":"connected"));
+            break;
+
+        case LTE_LC_EVT_CELL_UPDATE:
+            printk("Cell id => 0x%08X, Cell tac => 0x%08X\n", evt->cell.id, evt->cell.tac);
+            if (evt->cell.id == 0xFFFFFFFF && lte_link_up) {
+
+                lte_link_up = false;
+                printk("LTE network down\n");
+
+            } else if (!lte_link_up) {
+
+                if(s_lte_nw_reg_status == LTE_LC_NW_REG_REGISTERED_HOME ||
+                    s_lte_nw_reg_status == LTE_LC_NW_REG_REGISTERED_ROAMING) {
+
+                    lte_link_up = true;
+                    printk("LTE network established\n");
+                }
+            }
+            break;
+
+    }
+
+    if (!lte_link_up) {
+
+        ui_led_set_rgb(LED_MAX, LED_MAX, 0);
+
+        if (IotConnectSdk_IsConnected()) {
+            IotConnectSdk_Abort();
+        }
+    }
+    else {
+
+        ui_led_set_rgb(LED_MAX, 0, LED_MAX);
+
+    }
 }
 
 static void nrf_fota_cb(const struct fota_download_evt *evt) {
@@ -169,7 +269,7 @@ static void on_ota(IOTCL_EVENT_DATA data) {
     const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, success, message);
     if (NULL != ack) {
         printk("Sent OTA ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
+        IotConnectSdk_SendPacket(ack, NULL);
         free((void *) ack);
     }
 }
@@ -183,7 +283,7 @@ static void on_command(IOTCL_EVENT_DATA data) {
     const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, false, "Not implemented");
     if (NULL != ack) {
         printk("Sent CMD ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
+        IotConnectSdk_SendPacket(ack, NULL);
         free((void *) ack);
     } else {
         printk("Error while creating the ack JSON");
@@ -216,6 +316,11 @@ static void on_connection_status(IOT_CONNECT_STATUS status) {
     }
 }
 
+static void on_msg_ack_timeout(uint32_t msg_id) {
+
+    printk("Message acknowledge timeout! (msg id => %u)\n", msg_id);
+}
+
 static void publish_telemetry() {
     IOTCL_MESSAGE_HANDLE msg = IOTCL_TelemetryCreate(IotConnectSdk_GetLibConfig());
 
@@ -231,7 +336,7 @@ static void publish_telemetry() {
     const char *str = IOTCL_CreateSerializedString(msg, false);
     IOTCL_TelemetryDestroy(msg);
     printk("Sending: %s\n", str);
-    IotConnectSdk_SendPacket(str);
+    IotConnectSdk_SendPacket(str, NULL);
     IOTCL_DestroySerialized(str);
 }
 
@@ -253,77 +358,109 @@ static int time_init() {
 static int sdk_run() {
     int err;
     sdk_running = true;
-    ui_led_set_rgb(LED_MAX, LED_MAX, 0);
+    time_t now = 0;
+    time_t last_send_time;
+    time_t stop_send_time;
+    bool connecting_to_iotconnect = false;
+    bool time_updated = false;
 
-    printk("Waiting for network.. ");
-
-    err = lte_lc_connect();
+    err = lte_lc_connect_async(nrf_lte_evt_cb);
     if (err) {
         printk("Failed to connect to the LTE network, err %d\n", err);
         sdk_running = false;
         return err;
     }
-    printk("OK\n");
-
-    err = time_init();
-    if (err) {
-        return err;
+    else {
+        printk("Start establishing LTE network...\n");
     }
-
-    ui_led_set_rgb(LED_MAX, 0, LED_MAX);
-
-    if (strlen(cpid) == 0 || strlen(env) == 0) {
-        printk("You must configure your CPID and ENV in Kconfig\n");
-        printk("If using Segger Embedded Studio, go to Project->Configure nRF Connect SDK Project\n");
-        printk("And configure Company ID and Environment values.\n");
-        printk("Contact your IoTConnect representative in you need help with configuring the device.\n");
-        sdk_running = false;
-        return -EINVAL;
-    }
-
-    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
-    config->cpid = cpid;
-    config->duid = duid;
-    config->env = env;
-    config->cmd_cb = on_command;
-    config->ota_cb = on_ota;
-    config->status_cb = on_connection_status;
-    // From here start the IoTConnect SDK
-    int result = IotConnectSdk_Init();
-    if (0 != result) {
-        printk("Failed to initialize the SDK\n");
-        sdk_running = false;
-        return result;
-    }
-    ui_led_set_rgb(0, LED_MAX, LED_MAX);
-    // measure time
-    time_t now = time(NULL);
-    time_t last_send_time = now - CONFIG_TELEMETRY_SEND_INTERVAL_SECS; // send data every 10 seconds
-    time_t stop_send_time = now + 60 * CONFIG_TELEMETRY_DURATION_MINUTES; // stop sending after a few minutes
-
-    k_msleep(1000);
 
     do {
+
+        if (lte_link_up) {
+
+            /** Things to do when link is up */
+
+            if (!sdk_initialized) {
+
+                // From here start the IoTConnect SDK
+                err = IotConnectSdk_Init();
+                if (err) {
+                    printk("Failed to initialize the SDK. err %d\n", err);
+                    return err;
+                }
+
+                sdk_initialized = true;
+
+            }
+
+            if (!time_updated) {
+
+                //perform time update
+
+                err = time_init();
+                if (err) {
+                    return err;
+                }
+
+                time_updated = true;
+                // measure time
+                now = time(NULL);
+                last_send_time = now - CONFIG_TELEMETRY_SEND_INTERVAL_SECS; // send data every 10 seconds
+                stop_send_time = now + 60 * CONFIG_TELEMETRY_DURATION_MINUTES; // stop sending after a few minutes
+
+            }
+
+            //connect to IotConnect if not.
+            if (!IotConnectSdk_IsConnected() && !connecting_to_iotconnect) {
+
+                connecting_to_iotconnect = true;
+
+                err = IotConnectSdk_Connect();
+                if (err) {
+                    printk("Failed to connect to IoTConnect MQTT broker, err %d", err);
+                    sdk_running = false;
+                    connecting_to_iotconnect = false;
+                    k_msleep(1000);
+                }
+                else {
+
+                    ui_led_set_rgb(0, LED_MAX, LED_MAX);
+                }
+            }
+            else if (IotConnectSdk_IsConnected() && connecting_to_iotconnect) {
+            
+                connecting_to_iotconnect = false;
+
+            }
+
+            now = time(NULL);
+            if (IotConnectSdk_IsConnected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
+                last_send_time = now;
+                if (!fota_in_progress) {
+                    publish_telemetry();
+
+                }
+            }
+            if (fota_in_progress) {
+                // extend telemetry duration to a full interval, just to keep things connected and avoid disconnection
+                stop_send_time = now + 60 * CONFIG_TELEMETRY_DURATION_MINUTES;
+            }
+
+        }
+
         IotConnectSdk_Loop();
         if (sdk_do_shutdown) {
             sdk_do_shutdown = false;
             break;
         }
-        now = time(NULL);
-        if (IotConnectSdk_IsConnected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
-            last_send_time = now;
-            if (!fota_in_progress) {
-                publish_telemetry();
 
-            }
-        }
-        if (fota_in_progress) {
-            // extend telemetry duration to a full interval, just to keep things connected and avoid disconnection
-            stop_send_time = now + 60 * CONFIG_TELEMETRY_DURATION_MINUTES;
-        }
         k_msleep(CONFIG_MAIN_LOOP_INTERVAL_MS);
-        now = time(NULL);
-    } while (CONFIG_TELEMETRY_DURATION_MINUTES >= 0 && now < stop_send_time);
+
+        if (time_updated) {
+            now = time(NULL);
+        }
+
+    } while (!time_updated || (CONFIG_TELEMETRY_DURATION_MINUTES >= 0 && now < stop_send_time));
 
     // this function will stop the IoTConnect SDK
     IotConnectSdk_Disconnect();
@@ -367,11 +504,11 @@ void main(void) {
     err = bsdlib_init();
 #else
     /* If bsdlib is initialized on post-kernel we should
-	 * fetch the returned error code instead of bsdlib_init
-	 */
-	err = bsdlib_get_init_ret();
+    * fetch the returned error code instead of bsdlib_init
+    */
+    err = bsdlib_get_init_ret();
 #endif
-	if (err) {
+    if (err) {
         printk("Failed to initialize bsdlib!\n");
         return;
     }
@@ -434,6 +571,23 @@ void main(void) {
     printk("DUID: %s\n", duid);
 
     dk_buttons_init(button_handler);
+
+    if (strlen(cpid) == 0 || strlen(env) == 0) {
+        printk("You must configure your CPID and ENV in Kconfig\n");
+        printk("If using Segger Embedded Studio, go to Project->Configure nRF Connect SDK Project\n");
+        printk("And configure Company ID and Environment values.\n");
+        printk("Contact your IoTConnect representative in you need help with configuring the device.\n");
+        return;
+    }
+
+    IOTCONNECT_CLIENT_CONFIG *config = IotConnectSdk_InitAndGetConfig();
+    config->cpid = cpid;
+    config->duid = duid;
+    config->env = env;
+    config->cmd_cb = on_command;
+    config->ota_cb = on_ota;
+    config->status_cb = on_connection_status;
+    config->msg_ack_timeout_cb = on_msg_ack_timeout;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
