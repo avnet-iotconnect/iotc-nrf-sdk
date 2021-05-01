@@ -205,12 +205,13 @@ void IotConnectSdk_Disconnect() {
     k_msleep(100);
 }
 
-bool IotConnectSdk_SendPacket(const char *data, uint32_t *msg_id) {
-    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, 1, data, strlen(data), msg_id)) {
+int IotConnectSdk_SendPacket(const char *data, uint32_t *msg_id) {
+    int err;
+    err = iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, 1, data, strlen(data), msg_id);
+    if (0 != err) {
         printk("\n\t Device_Attributes_Data Publish failure");
-        return false;
     }
-    return true;
+    return err;
 }
 
 static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type) {
