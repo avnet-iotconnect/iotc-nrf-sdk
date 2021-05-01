@@ -468,7 +468,7 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
                 break;
             }
 
-            //printk("Packet id: %u acknowledged\n", evt->param.puback.message_id);
+            printk("Packet id: %u acknowledged\n", evt->param.puback.message_id);
 
             //Remove message Id from list if found.
             if (msg_wait_puback_list_find(evt->param.puback.message_id)) {

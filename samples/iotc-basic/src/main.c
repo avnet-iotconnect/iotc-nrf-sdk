@@ -142,10 +142,13 @@ static void nrf_lte_evt_cb(const struct lte_lc_evt *const evt){
 
         case LTE_LC_EVT_CELL_UPDATE:
             printk("Cell id => 0x%08X, Cell tac => 0x%08X\n", evt->cell.id, evt->cell.tac);
-            if (evt->cell.id == 0xFFFFFFFF && lte_link_up) {
+            if (evt->cell.id == 0xFFFFFFFF) {
 
-                lte_link_up = false;
-                printk("LTE network down\n");
+                if (lte_link_up) {
+
+                    lte_link_up = false;
+                    printk("LTE network down\n");
+                }
 
             } else if (!lte_link_up) {
 
