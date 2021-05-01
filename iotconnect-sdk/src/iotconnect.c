@@ -1,6 +1,7 @@
 //
 // Copyright: Avnet, Softweb Inc. 2020
 // Modified by Nik Markovic <nikola.markovic@avnet.com> on 6/15/20.
+// Modified by Alan Low <alan.low@avnet.com> on 4/28/21.
 //
 #include <string.h>
 #include <stdlib.h>
@@ -190,19 +191,26 @@ static void on_iotconnect_status(IOT_CONNECT_STATUS status) {
     }
 }
 
+static void iotc_on_mqtt_puback_timeout(uint32_t msg_id) {
+    if (config.msg_ack_timeout_cb){
+        config.msg_ack_timeout_cb(msg_id);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Get All twin property from C2D
 void IotConnectSdk_Disconnect() {
     printk("Disconnecting...\n");
-    mqtt_disconnect(&client);
+    iotc_nrf_mqtt_disconnect();
     k_msleep(100);
 }
 
-void IotConnectSdk_SendPacket(const char *data) {
-    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, 1, data, strlen(data))) {
+bool IotConnectSdk_SendPacket(const char *data, uint32_t *msg_id) {
+    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, 1, data, strlen(data), msg_id)) {
         printk("\n\t Device_Attributes_Data Publish failure");
+        return false;
     }
+    return true;
 }
 
 static void on_message_intercept(IOTCL_EVENT_DATA data, IotConnectEventType type) {
@@ -279,14 +287,6 @@ int IotConnectSdk_Init() {
     printk("CPID: %s***\n", cpid_buff);
     printk("ENV:  %s\n", config.env);
 
-    mqtt_config.tls_verify = CONFIG_PEER_VERIFY;
-    mqtt_config.data_cb = iotc_on_mqtt_data;
-    mqtt_config.status_cb = on_iotconnect_status;
-
-    if (!iotc_nrf_mqtt_init(&mqtt_config, sync_response)) {
-        return -4;
-    }
-
     lib_config.device.env = config.env;
     lib_config.device.cpid = config.cpid;
     lib_config.device.duid = config.duid;
@@ -299,7 +299,38 @@ int IotConnectSdk_Init() {
 
     if (!IOTCL_Init(&lib_config)) {
         printk("Failed to initialize the IoTConnect Lib");
+        return -4;
     }
 
     return 0;
 }
+
+int IotConnectSdk_Connect() {
+
+    if (!IOTCL_GetConfig()) {
+        return -0x101;
+    }
+
+    mqtt_config.tls_verify = CONFIG_PEER_VERIFY;
+    mqtt_config.data_cb = iotc_on_mqtt_data;
+    mqtt_config.status_cb = on_iotconnect_status;
+    mqtt_config.puback_timeout_cfg.timeout_s = 5;
+    mqtt_config.puback_timeout_cfg.cb = iotc_on_mqtt_puback_timeout;
+
+    if (!iotc_nrf_mqtt_init(&mqtt_config, sync_response)) {
+        return -0x102;
+    }
+
+    return 0;
+}
+
+int IotConnectSdk_Abort() {
+    if (!IOTCL_GetConfig()) {
+        return -0x201;
+    }
+
+    iotc_nrf_mqtt_abort();
+
+    return 0;
+}
+
