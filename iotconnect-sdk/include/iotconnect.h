@@ -59,7 +59,7 @@ bool IotConnectSdk_IsConnected();
 
 IOTCL_CONFIG *IotConnectSdk_GetLibConfig();
 
-bool IotConnectSdk_SendPacket(const char *data, uint32_t *msg_id);
+int IotConnectSdk_SendPacket(const char *data, uint32_t *msg_id);
 
 void IotConnectSdk_Loop();
 
