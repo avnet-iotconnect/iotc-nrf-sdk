@@ -190,7 +190,7 @@ static void on_ota(IOTCL_EVENT_DATA data) {
     const char *ack = IOTCL_CreateAckStringAndDestroyEvent(data, success, message);
     if (NULL != ack) {
         printk("Sent OTA ack: %s\n", ack);
-        IotConnectSdk_SendPacket(ack);
+        IotConnectSdk_SendPacket(ack, NULL);
         free((void *) ack);
     }
 }
@@ -292,7 +292,7 @@ static void publish_telemetry() {
     const char *str = IOTCL_CreateSerializedString(msg, false);
     IOTCL_TelemetryDestroy(msg);
     printk("Sending: %s\n", str);
-    IotConnectSdk_SendPacket(str);
+    IotConnectSdk_SendPacket(str, NULL);
     IOTCL_DestroySerialized(str);
 }
 
@@ -374,6 +374,8 @@ static int sdk_run() {
     config->cmd_cb = on_command;
     config->ota_cb = on_ota;
     config->status_cb = on_connection_status;
+    config->msg_ack_timeout_cb = NULL;
+
     // From here start the IoTConnect SDK
     int result = IotConnectSdk_Init();
     if (0 != result) {
@@ -381,6 +383,15 @@ static int sdk_run() {
         sdk_running = false;
         return result;
     }
+
+    // Connect to IotConnect MQTT broker
+    result = IotConnectSdk_Connect();
+    if (0 != result) {
+        printk("Failed to etsablish connection to IotConnect MQTT broker\n");
+        sdk_running = false;
+        return result;
+    }
+
     ui_led_set_rgb(0, LED_MAX, LED_MAX);
     // measure time
     time_t now = time(NULL);
