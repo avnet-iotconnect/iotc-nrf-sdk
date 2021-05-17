@@ -20,6 +20,11 @@
 #include "iotconnect.h"
 #include "nrf_cert_store.h"
 
+#define MQTT_PUBACK_TIMEOUT_S       5 //5 secs
+
+SYS_MUTEX_DEFINE(mutex_mqtt_pub);
+static unsigned int pending_ack_msg_id = 0;
+static bool msg_ack_pending = false;
 
 extern struct mqtt_client client;
 static IotconnectMqttConfig *config;
@@ -51,7 +56,7 @@ static void mqtt_evt_handler(struct mqtt_client *const c, const struct mqtt_evt 
 
 static unsigned int get_next_message_id() {
     if (rolling_message_id + 1 >= UINT_MAX) {
-        rolling_message_id = 0;
+        rolling_message_id = 1;
     }
     return rolling_message_id++;
 }
@@ -223,20 +228,64 @@ static bool client_init() {
 int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos,
                           const uint8_t *data, size_t len) {
     struct mqtt_publish_param param;
+    int retry_count = 2;
+    int code;
 
-    param.message.topic.qos = qos;
-    param.message.topic.topic.utf8 = (u8_t *) topic;
-    param.message.topic.topic.size = strlen(param.message.topic.topic.utf8);
-    param.message.payload.data = (u8_t *) data;
-    param.message.payload.len = len;
-    param.message_id = get_next_message_id();
-    param.dup_flag = 0;
-    param.retain_flag = 0;
+    //mutex lock
+    sys_mutex_lock(&mutex_mqtt_pub, K_FOREVER);
 
-    int code = mqtt_publish(c, &param);
-    if (code != 0) {
-        printf("data_publish error: %d", code);
-    }
+    do {
+
+        param.message.topic.qos = qos;
+        param.message.topic.topic.utf8 = (u8_t *) topic;
+        param.message.topic.topic.size = strlen(param.message.topic.topic.utf8);
+        param.message.payload.data = (u8_t *) data;
+        param.message.payload.len = len;
+        param.message_id = get_next_message_id();
+        param.dup_flag = 0;
+        param.retain_flag = 0;
+
+        code = mqtt_publish(c, &param);
+        if (code != 0) {
+            goto publish_done;
+        }
+
+        if (param.message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) {
+
+            pending_ack_msg_id = param.message_id;
+            msg_ack_pending = true;
+
+            uint32_t start_ticks = k_uptime_get_32();
+
+            do {
+
+                iotc_nrf_mqtt_loop();
+                k_msleep(1);
+
+            } while (msg_ack_pending &&
+                    (k_uptime_get_32() - start_ticks) < (MQTT_PUBACK_TIMEOUT_S * 1000));
+
+            if (!msg_ack_pending) {
+                code = 0;
+                break;
+            }
+
+            if (retry_count > 0) {
+                retry_count--;
+                if (retry_count == 0) {
+                    msg_ack_pending = false;
+                    code = -ETIMEDOUT;
+                }
+            }
+        }
+
+    } while ((param.message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) && (retry_count > 0));
+
+publish_done:
+
+    //mutex unlock
+    sys_mutex_unlock(&mutex_mqtt_pub);
+
     return code;
 }
 
@@ -264,7 +313,7 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
 
         case MQTT_EVT_DISCONNECT:
             printk("MQTT client disconnected %d\n", evt->result);
-
+            fds.fd = -1;
             connected = false;
             if (config->status_cb) {
                 config->status_cb(MQTT_DISCONNECTED);
@@ -303,6 +352,12 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
             }
 
             printk("Packet id: %u acknowledged\n", evt->param.puback.message_id);
+
+            if (msg_ack_pending) {
+                if (pending_ack_msg_id == evt->param.puback.message_id) {
+                    msg_ack_pending = false;
+                }
+            }
             break;
 
         case MQTT_EVT_SUBACK:
@@ -375,6 +430,7 @@ bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
         return false;
     }
 
+    fds.fd = -1;
     sync_response = sr;
     config = c;
 
@@ -402,6 +458,11 @@ bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
 // MQTT will work in while loop
 void iotc_nrf_mqtt_loop(void) {
     int err;
+
+    //if no FD return.
+    if (fds.fd == -1) {
+        return;
+    }
 
     err = poll(&fds, 1, 10);
     if (err < 0) {
@@ -435,4 +496,9 @@ void iotc_nrf_mqtt_loop(void) {
         printk("POLLNVAL\n");
         return;
     }
+}
+
+void iotc_nrf_mqtt_abort() {
+
+    mqtt_abort(&client);
 }
