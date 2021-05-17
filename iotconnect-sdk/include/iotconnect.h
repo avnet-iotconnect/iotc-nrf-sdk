@@ -54,6 +54,8 @@ void iotconnect_sdk_loop();
 
 void iotconnect_sdk_disconnect();
 
+int iotconnect_sdk_abort();
+
 #ifdef __cplusplus
 }
 #endif

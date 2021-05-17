@@ -33,6 +33,7 @@ static IotclConfig lib_config = {0};;
 static IotconnectMqttConfig mqtt_config = {0};
 
 static char send_buf[MAXLINE + 1];
+static bool sdk_initialized = false;
 
 static void dump_response(const char *message, IotconnectNrfHttpResponse *response) {
     printk("%s", message);
@@ -279,27 +280,38 @@ int iotconnect_sdk_init() {
     printk("CPID: %s***\n", cpid_buff);
     printk("ENV:  %s\n", config.env);
 
+    if (!sdk_initialized) {
+        lib_config.device.env = config.env;
+        lib_config.device.cpid = config.cpid;
+        lib_config.device.duid = config.duid;
+        lib_config.telemetry.dtg = sync_response->dtg;;
+        lib_config.event_functions.ota_cb = config.ota_cb;
+        lib_config.event_functions.cmd_cb = config.cmd_cb;
+    
+        // intercept internal processing and forward to client
+        lib_config.event_functions.msg_cb = on_message_intercept;
+    
+        if (!iotcl_init(&lib_config)) {
+            printk("Failed to initialize the IoTConnect Lib");
+            return -4;
+        }
+        sdk_initialized = true;
+    }
     mqtt_config.tls_verify = CONFIG_PEER_VERIFY;
     mqtt_config.data_cb = iotc_on_mqtt_data;
     mqtt_config.status_cb = on_iotconnect_status;
 
     if (!iotc_nrf_mqtt_init(&mqtt_config, sync_response)) {
-        return -4;
+        return -8;
     }
-
-    lib_config.device.env = config.env;
-    lib_config.device.cpid = config.cpid;
-    lib_config.device.duid = config.duid;
-    lib_config.telemetry.dtg = sync_response->dtg;;
-    lib_config.event_functions.ota_cb = config.ota_cb;
-    lib_config.event_functions.cmd_cb = config.cmd_cb;
-
-    // intercept internal processing and forward to client
-    lib_config.event_functions.msg_cb = on_message_intercept;
-
-    if (!iotcl_init(&lib_config)) {
-        printk("Failed to initialize the IoTConnect Lib");
-    }
-
     return 0;
 }
+
+int iotconnect_sdk_abort() {
+    if (!iotcl_get_config()) {
+        return -0x201;
+    }
+    iotc_nrf_mqtt_abort();
+    return 0;
+}
+
