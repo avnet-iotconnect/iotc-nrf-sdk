@@ -33,6 +33,8 @@ bool iotc_nrf_mqtt_is_connected();
 
 int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos, const uint8_t *data, size_t len);
 
+void iotc_nrf_mqtt_abort();
+
 #ifdef __cplusplus
 }
 #endif
