@@ -26,6 +26,11 @@ jobs:
           bash -x scripts/pull-cjson-lib.sh &&
           bash -x scripts/setup-iotc-c-lib.sh
 
+      - name: Build the Basic Sample Project for avt9152
+        run: |
+          cd samples/iotc-basic &&
+          ../../scripts/build-project-avt9152.sh
+
       - name: Build the Basic Sample Project
         run: |
           cd samples/iotc-basic &&
@@ -38,6 +43,15 @@ jobs:
         run: |
           cd samples/iotc-sensors-gps &&
           ../../scripts/build-project.sh
+
+      - name: Publish Sample Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: nrf-sample-avt9152
+          path: |
+            samples/iotc-basic/build_avt9152/zephyr/merged.hex
+            samples/iotc-basic/build_avt9152/zephyr/app_signed.hex
+            samples/iotc-basic/build_avt9152/zephyr/app_update.bin
 
       - name: Publish Sample Artifacts
         uses: actions/upload-artifact@v2
