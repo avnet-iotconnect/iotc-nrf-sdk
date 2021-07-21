@@ -44,7 +44,7 @@ jobs:
           cd samples/iotc-sensors-gps &&
           ../../scripts/build-project.sh
 
-      - name: Publish Sample Artifacts
+      - name: Publish Sample Artifacts (for avt9152)
         uses: actions/upload-artifact@v2
         with:
           name: nrf-sample-avt9152
