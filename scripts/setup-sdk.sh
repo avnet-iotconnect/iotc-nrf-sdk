@@ -32,4 +32,3 @@ sudo pip3 install -r bootloader/mcuboot/scripts/requirements.txt
 
 popd # "${NCS_ROOT}"
 
-cp -R "${this_dir}"/../boards/arm/nrf9160_avt9152 "${this_dir}"/../ncs/zephyr/boards/arm/nrf9160_avt9152/

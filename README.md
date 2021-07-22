@@ -26,7 +26,7 @@ to have proper time integration.
   * Board Directory: 
     * for DK: *<NCS_ROOT>/zephyr/boards/arm/nrf9160dk_nrf9160*
     * for Thingy91: *<NCS_ROOT>/nrf/boards/arm/thingy91_nrf9160*
-    * for AVT9152-EVB: *<NCS_ROOT>/nrf/boards/arm/nrf9160_avt9152*
+    * for AVT9152-EVB: */boards/arm/nrf9160_avt9152*
   * Board Name: 
     * for DK: *nrf9160dk_nrf9160ns*
     * for Thingy91: *thingy91_nrf9160ns*
