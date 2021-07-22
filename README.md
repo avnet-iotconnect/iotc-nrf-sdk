@@ -2,9 +2,9 @@
 
 This repository contains IoTConnect nRF SDK and samples intended for use with Avnet's IoTConnect platform.
 
-The sample shows how to make use of the IoTConnect SDK to connect your DK or Thingy 91 devices to IoTConnect
+The sample shows how to make use of the IoTConnect SDK to connect your DK, Thingy91 or AVT9152-EVB devices to IoTConnect
 
-Note iotc-basic demo can be run on the DK or Thingy91. The iotc-sensors-gps sample is intended for Thingy91.
+Note iotc-basic demo can be run on the DK, Thingy91 or AVT9152-EVB. The iotc-sensors-gps sample is intended for Thingy91.
 
 ### Building
 
@@ -23,9 +23,14 @@ The default implementation of the gettimeofday in the nRF SDK needs to be declar
 to have proper time integration.
 * Open the project using the Segger Embedded Studio with *File->Open nRF Connect SDK Project* using:
   * CmakeLists.txt from one of the samples
-  * Board Directory: for DK: <NCS_ROOT>/zephyr/boards/arm/nrf9160dk_nrf9160, 
-  for Thingy91: <NCS_ROOT>/nrf/boards/arm/thingy91_nrf9160
-  * Board Name: nrf9160dk_nrf9160ns or thingy91_nrf9160ns, for DK or Thingy91 respectively
+  * Board Directory: 
+    * for DK: *<NCS_ROOT>/zephyr/boards/arm/nrf9160dk_nrf9160*
+    * for Thingy91: *<NCS_ROOT>/nrf/boards/arm/thingy91_nrf9160*
+    * for AVT9152-EVB: */boards/arm/nrf9160_avt9152*
+  * Board Name: 
+    * for DK: *nrf9160dk_nrf9160ns*
+    * for Thingy91: *thingy91_nrf9160ns*
+    * for AVT9152-EVB: *nrf9160_avt9152ns*
 * Configure the project with *Project->Configure nRF SDK Project*
   * Select *menuconfig*
   * Expand the *IoTConnect Sample* tree
@@ -139,7 +144,7 @@ project. This method is not recommended for production.
 ### Running the Sample Projects
 
 Once the project is configured, built and flashed onto your board, the application will run for several minutes. 
-You can interrupt it by pressing the middle button. Pressing the button again will connect the app to IoTConnect again.
+You can interrupt it by pressing the middle button for Thingy91 or pressing Button 1 for DK or momentary shorting D11 of AVT9152-EVB to GND. Repeating the same action will connect the app to IoTConnect again. (Please refer to [AVT9152 EVB User Manual][evb_user_manual_link] on how to enable and locate Arduino D11 pin.)
 
 The iotc-sensors-gps sample will trigger obtaining the GPS location when the Thingy91 button is long-pressed. It will 
 stay in this mode until the GPS fix is obtained or until the button is pressed again. 
@@ -156,3 +161,6 @@ MCUBOOT when you have the default asset tracker programmed onto the board.
 This file needs to match the asset_tracker's configuration in order for OTA to work. If you intend to use the code
 by programming all of the the boards with JTAG, these files are not needed.
 
+
+[evb_user_manual_link]:
+https://www.avnet.com/wps/wcm/connect/onesite/3788e3c1-a386-4196-a88f-21307ff28984/AVT9152+EVB+User+Manual+v1.0.pdf?MOD=AJPERES&CACHEID=ROOTWORKSPACE.Z18_NA5A1I41L0ICD0ABNDMDDG0000-3788e3c1-a386-4196-a88f-21307ff28984-nvGFXpQ

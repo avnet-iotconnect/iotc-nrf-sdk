@@ -72,6 +72,8 @@ target_sources(app PRIVATE src/test_certs.c)
 zephyr_include_directories(../../cJSON)
 zephyr_library_sources(../../cJSON/cJSON.c)
 
-add_subdirectory(src/ui)
+if(NOT DEFINED CONFIG_BOARD_NRF9160_AVT9152NS)
+  add_subdirectory(src/ui)
+endif()
 
 add_subdirectory(../../iotconnect-sdk build/iotconnect-sdk)

@@ -1,0 +1,6 @@
+
+/ {
+	aliases {
+		sw0 = &arduino_pin17;
+	};
+};
