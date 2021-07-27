@@ -2,7 +2,7 @@
 
 This sample shows how to make use of the IoTConnect SDK to connect your DK, Thingy:91 or AVT9152-EVB devices to IoTConnect.
 
-For more information, see the README.md in ../
+For more information, see the README.md in ../../
 
 
 ### Led Color (Thingy:91) and Button Behavior
