@@ -13,11 +13,11 @@
 #include <modem/bsdlib.h>
 #include <modem/lte_lc.h>
 #include <modem/at_cmd.h>
-#if IS_ENABLED(CONFIG_BOARD_NRF9160_AVT9152NS)
+#if IS_ENABLED(CONFIG_BOARD_THINGY91_NRF9160NS)
+#include "led_pwm.h"
+#else
 #define ui_leds_init()
 #define ui_led_set_rgb(a,b,c)
-#else
-#include <led_pwm.h>
 #endif
 #include <power/reboot.h>
 #include <dfu/mcuboot.h>

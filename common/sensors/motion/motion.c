@@ -43,16 +43,25 @@ int motiondata_to_orientation(motion_data_t *motion_data) {
     return 0;
 }
 
-
-#define DEV_NAME "ADXL362"
+#if IS_ENABLED(CONFIG_BOARD_THINGY91_NRF9160NS)
+#define DEV_NAME            "ADXL362"
+#define DEV_SENSOR_CHAN     SENSOR_CHAN_ALL
+#elif IS_ENABLED(CONFIG_BOARD_NRF9160_AVT9152NS)
+#define DEV_NAME            "LIS2DH12-ACCEL"
+#define DEV_SENSOR_CHAN     SENSOR_CHAN_ALL
+#else
+#define DEV_NAME            CONFIG_SENSOR_SIM_DEV_NAME
+#define DEV_SENSOR_CHAN     SENSOR_CHAN_ACCEL_XYZ
+#endif
 
 /**@brief Initialize environment sensors. */
 int accelerometer_init(void) {
     motion_dev = device_get_binding(DEV_NAME);
     if (!motion_dev) {
-        printk("Unable to initialize the accelerometer");
+        printk("Unable to initialize the accelerometer\n");
         return -ENODEV;
     }
+    printk("accelerometer: %s\n", DEV_NAME);
     return 0;
 }
 
@@ -65,9 +74,10 @@ int accelerometer_get_data(motion_data_t *data) {
         return -ENODEV;
     }
 
-    int err = sensor_sample_fetch_chan(motion_dev, SENSOR_CHAN_ALL);
+    int err = sensor_sample_fetch_chan(motion_dev, DEV_SENSOR_CHAN);
     if (err) {
         printk("Failed to get data for accelerometer. Error: %d\n ", err);
+        return err;
     }
 
     struct sensor_value sv = {0};

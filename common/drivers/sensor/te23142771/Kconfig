@@ -1,0 +1,16 @@
+#
+#  Copyright (c) 2019 Nordic Semiconductor ASA
+#
+#  SPDX-License-Identifier: Apache-2.0
+#
+
+menuconfig TE23142771
+	bool "TE23142771 Sensor"
+	depends on I2C
+	help
+	  Enable driver for TE23142771 sensor.
+
+
+module = TE23142771
+module-str = TE23142771
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
