@@ -47,17 +47,12 @@ config MAIN_LOOP_INTERVAL_MS
 	    Longer loop interval may cause mqtt connection to time out. It should not be more than several seconds.
 	default 100
 
-menuconfig THINGY_SENSORS
-	select SENSOR
-	bool "Enable thingy Sensors"
-	select BH1749 if BOARD_THINGY91_NRF9160NS
-	default y if BOARD_THINGY91_NRF9160NS
-	select BME680 if BOARD_THINGY91_NRF9160NS
-	select ADXL362 if BOARD_THINGY91_NRF9160NS
-	select PWM if BOARD_THINGY91_NRF9160NS
-	select PWM_0 if BOARD_THINGY91_NRF9160NS
-	select PWM_1 if BOARD_THINGY91_NRF9160NS
-
+config USE_SENSOR_SIM
+	bool "Use sensor simulator for motion and env_sensors"
+	default y
+	select SENSOR_SIM
+	select SENSOR_SIM_TRIGGER
+	select SENSOR_SIM_STATIC_VALUES
 
 endmenu
 

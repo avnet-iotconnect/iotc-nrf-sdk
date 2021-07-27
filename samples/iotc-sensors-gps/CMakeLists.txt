@@ -54,6 +54,7 @@ set(WITH_FEATURE_ZEPHYR)
 # TODO: figure out how to deal with path warnings
 cmake_policy(SET CMP0076 NEW)
 
+set(ZEPHYR_EXTRA_MODULES ../../common/drivers/sensor)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(iotc-sensors-gps)
@@ -74,10 +75,10 @@ target_sources(app PRIVATE src/test_certs.c)
 zephyr_include_directories(../../cJSON)
 zephyr_library_sources(../../cJSON/cJSON.c)
 
-add_subdirectory(src/sensors/light_sensor)
+add_subdirectory_ifdef(CONFIG_BH1749 src/sensors/light_sensor)
 add_subdirectory(src/sensors/motion)
 add_subdirectory(src/sensors/env_sensors)
-add_subdirectory(src/ui)
+add_subdirectory_ifdef(CONFIG_BOARD_THINGY91_NRF9160NS src/ui)
 add_subdirectory(src/gps_controller)
 
 add_subdirectory(../../iotconnect-sdk build/iotconnect-sdk)

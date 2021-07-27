@@ -26,15 +26,12 @@ jobs:
           bash -x scripts/pull-cjson-lib.sh &&
           bash -x scripts/setup-iotc-c-lib.sh
 
-      - name: Build the Basic Sample Project for avt9152
-        run: |
-          cd samples/iotc-basic &&
-          ../../scripts/build-project-avt9152.sh
-
       - name: Build the Basic Sample Project
         run: |
           cd samples/iotc-basic &&
-          ../../scripts/build-project.sh
+          ../../scripts/build-project.sh dk &&
+          ../../scripts/build-project.sh thingy91 &&
+          ../../scripts/build-project.sh avt9152
 
       - name: Build the Sensors and GPS Sample
         env:
@@ -42,40 +39,26 @@ jobs:
           NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
         run: |
           cd samples/iotc-sensors-gps &&
-          ../../scripts/build-project.sh
-
-      - name: Publish Sample Artifacts (for avt9152)
-        uses: actions/upload-artifact@v2
-        with:
-          name: nrf-sample-avt9152
-          path: |
-            samples/iotc-basic/build_avt9152/zephyr/merged.hex
-            samples/iotc-basic/build_avt9152/zephyr/app_signed.hex
-            samples/iotc-basic/build_avt9152/zephyr/app_update.bin
+          ../../scripts/build-project.sh dk &&
+          ../../scripts/build-project.sh thingy91 &&
+          ../../scripts/build-project.sh avt9152
 
       - name: Publish Sample Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: nrf-sample
-          path: |
-            samples/iotc-basic/build/zephyr/merged.hex
-            samples/iotc-basic/build/zephyr/app_signed.hex
-            samples/iotc-basic/build/zephyr/app_update.bin
+          path: samples/iotc-basic/precompiled_image/*
 
       - name: Publish GPS Sample Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: nrf-gps-sample
-          path: |
-            samples/iotc-sensors-gps/build/zephyr/merged.hex
-            samples/iotc-sensors-gps/build/zephyr/app_signed.hex
-            samples/iotc-sensors-gps/build/zephyr/app_update.bin
+          path: samples/iotc-sensors-gps/precompiled_image/*
 
-      - name: Delete build folders
+      - name: Delete precompiled_image folders
         run: |
-          rm -r samples/iotc-basic/build &&
-          rm -r samples/iotc-sensors-gps/build &&
-          rm -r samples/iotc-basic/build_avt9152
+          rm -r samples/iotc-basic/precompiled_image &&
+          rm -r samples/iotc-sensors-gps/precompiled_image
 
       #use wildcards so that directory path is preserved.
       - name: Publish complete SDK source Artifacts

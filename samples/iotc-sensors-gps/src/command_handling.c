@@ -3,8 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#if IS_ENABLED(CONFIG_BOARD_THINGY91_NRF9160NS)
 #include "buzzer.h"
 #include "led_pwm.h"
+#else
+#define ui_led_set_rgb(a,b,c)
+#define ui_buzzer_set_frequency(a,b)
+#endif
 #include "iotconnect.h"
 #include "app_common.h"
 
