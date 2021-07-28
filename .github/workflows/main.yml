@@ -30,7 +30,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: project-sources
-          path: *
+          path: ./*
 
       - name: Build the Basic Sample Project
         run: |
