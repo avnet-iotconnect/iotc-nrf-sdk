@@ -26,6 +26,12 @@ jobs:
           bash -x scripts/pull-cjson-lib.sh &&
           bash -x scripts/setup-iotc-c-lib.sh
 
+      - name: Publish Project Sources
+        uses: actions/upload-artifact@v2
+        with:
+          name: sources
+          path: *
+
       - name: Build the Basic Sample Project
         run: |
           cd samples/iotc-basic &&
