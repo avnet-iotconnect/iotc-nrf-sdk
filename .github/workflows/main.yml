@@ -26,11 +26,8 @@ jobs:
           bash -x scripts/pull-cjson-lib.sh &&
           bash -x scripts/setup-iotc-c-lib.sh
 
-      - name: Publish Project Sources
-        uses: actions/upload-artifact@v2
-        with:
-          name: project-sources
-          path: ./*
+      - name: Package Sources
+        run: tar --exclude='.git' --exclude='.github' -cf sources.tar .
 
       - name: Build the Basic Sample Project
         run: |
@@ -53,23 +50,19 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: nrf-sample
-          path: samples/iotc-basic/precompiled_image/*
+          path: |
+            samples/iotc-basic/precompiled_image/*
+            sources.tar
 
       - name: Publish GPS Sample Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: nrf-gps-sample
-          path: samples/iotc-sensors-gps/precompiled_image/*
+          path: |
+            samples/iotc-sensors-gps/precompiled_image/*
+            sources.tar
 
       - name: Delete precompiled_image folders
         run: |
           rm -r samples/iotc-basic/precompiled_image &&
           rm -r samples/iotc-sensors-gps/precompiled_image
-
-      #use wildcards so that directory path is preserved.
-      - name: Publish complete SDK source Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: iotc-nrf-sdk-src
-          path: ./*
-
