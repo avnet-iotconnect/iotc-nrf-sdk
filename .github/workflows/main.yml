@@ -27,7 +27,7 @@ jobs:
           bash -x scripts/setup-iotc-c-lib.sh
 
       - name: Package Sources
-        run: tar --exclude='.git' --exclude='.github' -cf sources.tar .
+        run: tar --exclude='ncs' --exclude='.git' --exclude='.github' -cf sources.tar .
 
       - name: Build the Basic Sample Project
         run: |
@@ -61,6 +61,12 @@ jobs:
           path: |
             samples/iotc-sensors-gps/precompiled_image/*
             sources.tar
+
+      - name: Publish Sources
+        uses: actions/upload-artifact@v2
+        with:
+          name: sources
+          path: sources.tar
 
       - name: Delete precompiled_image folders
         run: |
