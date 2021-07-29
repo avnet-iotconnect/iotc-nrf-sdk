@@ -7,16 +7,10 @@ The sample shows how to make use of the IoTConnect SDK to connect your DK, Thing
 ### Building
 
 * Install the nRF SDK v1.4.1 for your operating system. On linux, you can make use of the automated scripts
-in the scripts directory. 
-* Clone this repo into a directory on your system. This directory does not have to be in the ZEPHYR_BASE.
-* nRF SDK 1.3.x is not directly supported. If you wish to use the 1.3.X nRF SDK version, 
-search for **1.3.X** in prj.conf and nrf_fota.c and make appropriate source modification. 
-* On linux, run scripts/pull-cjson-lib.sh in this directory or clone the cJSON library from 
-github (see the file contents). The cJSON libraries need to be at later revision than what's available in the SDK.
-* On linux, run scripts/setup-iotc-c-lib.sh in this directory or follow these steps:
-  * Clone the https://github.com/Avnet/iotc-c-lib repo into this directory
-  * Copy common/iotc-c-lib-overlay/CMakeLists.txt into the root of the cloned repo
-* If on Lunux, run patch-gettimeofday.sh with defined ZEPHYR_BASE or apply the same changes, if on another OS. 
+in the scripts directory.
+* nRF SDK 1.3.x is not directly supported. If you wish to use the 1.3.X nRF SDK version, search for **1.3.X** in prj.conf and nrf_fota.c and make appropriate source modification. 
+* Download the sources from the Releases of this repository.
+* If on Lunux, run patch-gettimeofday.sh with defined ZEPHYR_BASE or apply the same changes, if on another OS.
 The default implementation of the gettimeofday in the nRF SDK needs to be declared as `weak` in order for us 
 to have proper time integration.
 * Open the project using the Segger Embedded Studio with *File->Open nRF Connect SDK Project* using:
