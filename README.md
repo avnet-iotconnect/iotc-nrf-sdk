@@ -108,14 +108,20 @@ CA Certificate and device needs to be added to IoTConnect.
 
 Follow these instructions to set up the board:
 
-* The device Unique ID (DUID) will be generated automatically for your nRF board based on IMEI of the board. 
-You need to obtain the device unique ID for your board first. Build and run the project initially and capture the 
+* You can assign a custom device Unique ID (DUID) in menuconfig (see below). If left blank, 
+the DUID will be generated automatically for your nRF board based on IMEI of the board. 
+If you are not using a custom DUID, you will need to obtain the device unique ID for your board first.
+Build and run the project initially and capture the 
 printout on the USB console where the message is printed "DUID: nrf-xxxxxx". Your device ID is 
 your IMEI prefixed with "nrf-". Alternatively, you can run AT+CGSN AT command to obtain the IMEI.
-* Follow the instructions at https://github.com/Avnet/iotc-c-lib in the tools/ecc-certs directory 
+* If using Self Signed authentication type, the device certificate and private key can be generated using 
+the IoTConnect web UI during the device. You should not be supplying a password in the UI. 
+Copy the Client Certificate and the Private Key into newly created files: *DUID*-crt.pem and *DUID*-key.pem 
+anywhere on your pc. You will use these files in the steps below.
+* If using CA Cert authentication, follow the instructions at https://github.com/Avnet/iotc-c-lib in the tools/ecc-certs directory 
 to create the certificates for your board. The instructions also contain steps to add your CA Certificate to IoTConnect.
-* Create a new CA Certificate based template in IoTConnect and select the uploaded certificate. Add at least one 
-telemetry field "cpu". For the nrf-sensors-gps sample, see the values in the publish_telemetry() function in main.c.
+* Create a new Self Signed or CA Certificate based template in IoTConnect. Add at least one telemetry field 
+"cpu". For the nrf-sensors-gps sample, see the values in the publish_telemetry() function in main.c.
 * Create a new device with Unique ID described in the first tep of this guide and assign the newly created template to it. 
 * Download the Baltimore Cyber Trust Root certificate from https://cacerts.digicert.com/BaltimoreCyberTrustRoot.crt.pem 
 * Install nRF Connect from Nordic's web site and install the the LTE Link Monitor. 
@@ -125,8 +131,8 @@ telemetry field "cpu". For the nrf-sensors-gps sample, see the values in the pub
 * Follow the instructions displayed at the top of the window to bring the modem into offline mode with AT+CFUN=4.
 * Copy and paste the contents of the following certificates (including the BEGIN and END lines):
   * CA Certificate: BaltimoreCyberTrustRoot.crt.pem
-  * Client Certificate: the generated nrf-*IMEI*-crt.pem
-  * Private Key: the generated nrf-*IMEI*-key.pem
+  * Client Certificate: the generated *DUID*-crt.pem
+  * Private Key: the generated *DUID*-key.pem
 * Enter 10701 into the Security Tag field.
 * Click the Update Certificates button in the bottom right of the window.
 
