@@ -575,6 +575,7 @@ void main(void) {
     ui_leds_init();
     k_msleep(10); // let PWM initialize
     ui_led_set_rgb(LED_MAX, LED_MAX, 0);
+    k_msleep(4000); // allow time for the user to connect the comm port to see the generated DUID and initialization errors
 
 #if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
     err = nrf_modem_lib_init();
@@ -645,7 +646,6 @@ void main(void) {
     if (strlen(CONFIG_IOTCONNECT_CUSTOM_DUID) == 0) {
         strcpy(duid, "nrf-");
         strcat(duid, imei);
-        k_msleep(2000); // allow time for the user to connect the comm port to see the generated DUID
     }
     printk("DUID: %s\n", duid);
 
