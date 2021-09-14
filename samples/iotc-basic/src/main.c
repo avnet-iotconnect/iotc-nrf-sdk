@@ -42,10 +42,10 @@
 #define PRINT_LTE_LC_EVENTS
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.01.02" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.02.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 #define LED_MAX 20U
 
-static char duid[30] = "nrf-dk-test"; // When using this code, your device ID will be nrf-IMEI.
+static char duid[65] = CONFIG_IOTCONNECT_CUSTOM_DUID; // When using this code, your device ID will be nrf-IMEI.
 static char *cpid = CONFIG_IOTCONNECT_CPID;
 static char *env = CONFIG_IOTCONNECT_ENV;
 
@@ -324,6 +324,34 @@ static void print_lte_lc_evt_string(const struct lte_lc_evt *const evt) {
         case LTE_LC_EVT_CELL_UPDATE:
             printk("Cell id => 0x%08X, Cell tac => 0x%08X\n", evt->cell.id, evt->cell.tac);
             break;
+
+        case LTE_LC_EVT_LTE_MODE_UPDATE:
+            printk("Received LTE_LC_EVT_LTE_MODE_UPDATE\n");
+            break;
+
+        case LTE_LC_EVT_TAU_PRE_WARNING:
+            printk("Received LTE_LC_EVT_TAU_PRE_WARNING\n");
+            break;
+
+        case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+            printk("Received LTE_LC_EVT_NEIGHBOR_CELL_MEAS\n");
+            break;
+
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT_PRE_WARNING:
+            printk("Received LTE_LC_EVT_MODEM_SLEEP_EXIT_PRE_WARNING\n");
+            break;
+
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT:
+            printk("Received LTE_LC_EVT_MODEM_SLEEP_EXIT\n");
+            break;
+
+        case LTE_LC_EVT_MODEM_SLEEP_ENTER:
+            printk("Received LTE_LC_EVT_MODEM_SLEEP_ENTER\n");
+            break;
+
+        case LTE_LC_EVT_CELL_UPDATE:
+            printk("Received LTE_LC_EVT_CELL_UPDATE\n");
+            break;
     }
 
 #endif    
@@ -383,6 +411,12 @@ static void nrf_lte_evt_cb(const struct lte_lc_evt *const evt) {
         case LTE_LC_EVT_PSM_UPDATE:
         case LTE_LC_EVT_EDRX_UPDATE:
         case LTE_LC_EVT_RRC_UPDATE:
+        case LTE_LC_EVT_LTE_MODE_UPDATE:
+        case LTE_LC_EVT_TAU_PRE_WARNING:
+        case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT_PRE_WARNING:
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT:
+        case LTE_LC_EVT_MODEM_SLEEP_ENTER:
             break;
     }
 
@@ -608,9 +642,11 @@ void main(void) {
             printk("Device provisioned successfully\n");
         }
 #endif
-    strcpy(duid, "nrf-");
-    strcat(duid, imei);
-    k_msleep(2000); // allow time for the user to connect the comm port to see the DUID
+    if (strlen(CONFIG_IOTCONNECT_CUSTOM_DUID) == 0) {
+        strcpy(duid, "nrf-");
+        strcat(duid, imei);
+        k_msleep(2000); // allow time for the user to connect the comm port to see the generated DUID
+    }
     printk("DUID: %s\n", duid);
 
     dk_buttons_init(button_handler);

@@ -13,10 +13,11 @@ config PROVISION_TEST_CERTIFICATES
 		a set of devices
 	default false
 
-config IOTCONNECT_DUID
-	string "IoTConnect Device UID"
+config IOTCONNECT_CUSTOM_DUID
+	string "Optional custom Device Unique ID (default nrf-IMEI if)"
 	help
-		If left empty, a dynamic device UID baded on IMEI <nrf-IMEI> will be generated.
+		If provided, a custom custom Device Unique ID will be used. Otherwise a generated ID will be used nrf-IMEI.
+		Maximum 64 characters.
 	default ""
 
 config IOTCONNECT_CPID
