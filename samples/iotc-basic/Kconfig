@@ -57,7 +57,7 @@ config MAIN_LOOP_INTERVAL_MS
 
 menuconfig THINGY_SENSORS
 	select SENSOR
-	bool "Enable thingy Sensors"
+	bool "Enable Thingy91 Sensors"
 	default y if BOARD_THINGY91_NRF9160NS
 	select PWM if BOARD_THINGY91_NRF9160NS
 	select PWM_0 if BOARD_THINGY91_NRF9160NS
