@@ -106,7 +106,7 @@ int nrf_cert_store_save_device_cert(const char *device_private_key, const char *
                                   device_cert
     };
     //nrf_sec_tag_t sec_tag = TLS_SEC_TAG_IOTCONNECT_MQTT; //CONFIG_CLOUD_CERT_SEC_TAG;
-    enum modem_key_mgnt_cred_type credentials[] = {
+    enum modem_key_mgmt_cred_type credentials[] = {
             MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
             MODEM_KEY_MGMT_CRED_TYPE_PRIVATE_CERT,
             MODEM_KEY_MGMT_CRED_TYPE_PUBLIC_CERT,
@@ -121,7 +121,7 @@ int nrf_cert_store_save_device_cert(const char *device_private_key, const char *
     }
 
     /* Write certificates */
-    for (enum modem_key_mgnt_cred_type type = 0; type < ARRAY_SIZE(credentials); type++) {
+    for (enum modem_key_mgmt_cred_type type = 0; type < ARRAY_SIZE(credentials); type++) {
         err |= modem_key_mgmt_write(TLS_SEC_TAG_IOTCONNECT_MQTT, credentials[type],
                                     certificates[type], strlen(certificates[type]));
         printk("modem_key_mgmt_write => result=%d\n", err);

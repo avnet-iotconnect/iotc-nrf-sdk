@@ -10,7 +10,8 @@
 #include <stdio.h>
 
 #include <zephyr.h>
-#include <modem/bsdlib.h>
+
+#include <modem/nrf_modem_lib.h>
 #include <modem/lte_lc.h>
 
 #include <power/reboot.h>
@@ -53,6 +54,7 @@
 #define MAIN_APP_VERSION "01.01.02" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 
 static enum lte_lc_system_mode default_system_mode;
+static enum lte_lc_system_mode_preference preference_mode;
 
 static char duid[30] = "nrf-dk-test"; // When using this code, your device ID will be nrf-IMEI.
 static char *cpid = CONFIG_IOTCONNECT_CPID;
@@ -765,7 +767,7 @@ static void gps_handler() {
 static int setup_modem_gps(void) {
     printk("turn on modem to GPS mode\n");
     lte_lc_offline();
-    lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS);
+    lte_lc_system_mode_set(LTE_LC_SYSTEM_MODE_GPS, preference_mode);
     lte_lc_normal();
     return 0;
 }
@@ -779,15 +781,15 @@ void main(void) {
     ui_led_set_rgb(LED_MAX, LED_MAX, 0);
 
 #if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
-    err = bsdlib_init();
+    err = nrf_modem_lib_init();
 #else
     /* If bsdlib is initialized on post-kernel we should
-     * fetch the returned error code instead of bsdlib_init
+     * fetch the returned error code instead of nrf_modem_lib_init
      */
-    err = bsdlib_get_init_ret();
+    err = nrf_modem_lib_get_init_ret();
 #endif
     if (err) {
-        printk("Failed to initialize bsdlib!\n");
+        printk("Failed to initialize nrf_modem_lib!\n");
         return;
     }
 
@@ -818,7 +820,7 @@ void main(void) {
         return;
     }
 
-    err = lte_lc_system_mode_get(&default_system_mode);
+    err = lte_lc_system_mode_get(&default_system_mode, &preference_mode);
     if (err) {
         printk("Failed to get system mode %d\n", err);
         return;
@@ -853,6 +855,7 @@ void main(void) {
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);
+    k_msleep(2000); // allow time for the user to connect the comm port to see the DUID
     printk("DUID: %s\n", duid);
 
     light_sensor_init();
@@ -885,7 +888,7 @@ void main(void) {
             gps_control_stop();
             gps_running = false;
             lte_lc_offline();
-            lte_lc_system_mode_set(default_system_mode);
+            lte_lc_system_mode_set(default_system_mode, preference_mode);
         }
         if (sdk_do_run && !sdk_running) {
             sdk_do_run = false;

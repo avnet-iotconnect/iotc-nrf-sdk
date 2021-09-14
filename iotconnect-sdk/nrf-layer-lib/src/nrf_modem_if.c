@@ -27,7 +27,7 @@ int _gettimeofday(struct timeval *tv, void *tzvp) {
     if (0 == rtc_offset_secs) {
         return -1;
     }
-    u32_t rtc_now_secs = k_uptime_get_32() / 1000;
+    uint32_t rtc_now_secs = k_uptime_get_32() / 1000;
     time_t time_now = rtc_offset_secs + rtc_now_secs;
     tv->tv_sec = time_now;
     tv->tv_usec = 0;
@@ -78,7 +78,7 @@ int nrf_modem_get_time(void) {
         return -ENODATA;
     }
 
-    u32_t rtc_now_ms = k_uptime_get_32();
+    uint32_t rtc_now_ms = k_uptime_get_32();
     rtc_offset_secs = (unix_time_ms - rtc_now_ms) / 1000;
 
     return 0;

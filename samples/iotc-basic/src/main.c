@@ -10,7 +10,9 @@
 
 #include <zephyr.h>
 #include <net/mqtt.h>
-#include <modem/bsdlib.h>
+
+#include <modem/nrf_modem_lib.h>
+#include <modem/modem_key_mgmt.h>
 #include <modem/lte_lc.h>
 #include <modem/at_cmd.h>
 #if IS_ENABLED(CONFIG_BOARD_THINGY91_NRF9160NS)
@@ -541,15 +543,15 @@ void main(void) {
     ui_led_set_rgb(LED_MAX, LED_MAX, 0);
 
 #if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
-    err = bsdlib_init();
+    err = nrf_modem_lib_init();
 #else
-    /* If bsdlib is initialized on post-kernel we should
-     * fetch the returned error code instead of bsdlib_init
+    /* If nrf_modem_lib is initialized on post-kernel we should
+     * fetch the returned error code instead of nrf_modem_lib
      */
-    err = bsdlib_get_init_ret();
+    err = nrf_modem_lib_get_init_ret();
 #endif
     if (err) {
-        printk("Failed to initialize bsdlib!\n");
+        printk("Failed to initialize nrf_modem_lib!\n");
         return;
     }
 
@@ -608,6 +610,7 @@ void main(void) {
 #endif
     strcpy(duid, "nrf-");
     strcat(duid, imei);
+    k_msleep(2000); // allow time for the user to connect the comm port to see the DUID
     printk("DUID: %s\n", duid);
 
     dk_buttons_init(button_handler);
