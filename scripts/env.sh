@@ -9,8 +9,9 @@ export GNUARMEMB_TOOLCHAIN_PATH=${GNUARMEMB_TOOLCHAIN_PATH:=/opt/gcc-arm-none-ea
 
 
 export NCS_ROOT=${NCS_ROOT:-/ncs}
+export ZEPHYR_BASE="${NCS_ROOT}/zephyr"
 
-export SDK_VERSION=v1.4.1
+export SDK_VERSION=v1.6.1
 export LC_ALL=${LC_ALL:-C.UTF-8}
 export LANG=${LANG:=C.UTF-8}
 export PATH=${GNUARMEMB_TOOLCHAIN_PATH}/bin:${CMAKE_INSTALL_PATH}/bin:${PATH}
