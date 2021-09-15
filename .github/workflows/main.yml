@@ -16,7 +16,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: nRF SDK Setup
+      - name: nRF Machine Setup
         run: sudo scripts/setup-machine.sh
 
       - name: nRF SDK Setup
@@ -33,7 +33,6 @@ jobs:
       - name: Build the Basic Sample Project
         run: |
           cd samples/iotc-basic &&
-          ../../scripts/build-project.sh dk &&
           ../../scripts/build-project.sh thingy91
 
       - name: Build the Sensors and GPS Sample
@@ -42,7 +41,6 @@ jobs:
           NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
         run: |
           cd samples/iotc-sensors-gps &&
-          ../../scripts/build-project.sh dk &&
           ../../scripts/build-project.sh thingy91
 
       - name: Publish Sample Artifacts
