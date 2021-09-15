@@ -51,7 +51,7 @@
 #define PRINT_LTE_LC_EVENTS
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "00.00.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.02.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 
 static enum lte_lc_system_mode default_system_mode;
 static enum lte_lc_system_mode_preference preference_mode;
