@@ -20,7 +20,7 @@ apt-get -y install device-tree-compiler
 mkdir -p $(dirname "${CMAKE_INSTALL_PATH}")
 pushd $(dirname "${CMAKE_INSTALL_PATH}")
 wget -q "${CMAKE_INSTALL_URL}" -O cmake-install.sh
-yes | sh cmake-install.sh | cat
+sh cmake-install.sh --skip-license | cat
 rm -f cmake-install.sh
 popd
 
