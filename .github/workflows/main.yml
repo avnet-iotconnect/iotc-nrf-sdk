@@ -34,8 +34,7 @@ jobs:
         run: |
           cd samples/iotc-basic &&
           ../../scripts/build-project.sh dk &&
-          ../../scripts/build-project.sh thingy91 &&
-          ../../scripts/build-project.sh avt9152
+          ../../scripts/build-project.sh thingy91
 
       - name: Build the Sensors and GPS Sample
         env:
@@ -44,8 +43,7 @@ jobs:
         run: |
           cd samples/iotc-sensors-gps &&
           ../../scripts/build-project.sh dk &&
-          ../../scripts/build-project.sh thingy91 &&
-          ../../scripts/build-project.sh avt9152
+          ../../scripts/build-project.sh thingy91
 
       - name: Publish Sample Artifacts
         uses: actions/upload-artifact@v2
