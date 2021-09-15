@@ -26,8 +26,9 @@ rm -f cmake-install.sh
 popd
 
 
+mkdir -p $(dirname "${CMAKE_INSTALL_PATH}")
 pushd $(dirname "${GNUARMEMB_TOOLCHAIN_PATH}")
-wget -q "${GNUARMEMB_TOOLCHAIN_URL}" -O gcc-arm-none-eabi-linux.tar.bz2
+wget --no-check-certificate -q "${GNUARMEMB_TOOLCHAIN_URL}" -O gcc-arm-none-eabi-linux.tar.bz2
 tar -xf gcc-arm-none-eabi-linux.tar.bz2
 rm -f gcc-arm-none-eabi-linux.tar.bz2
 ln -sf $(basename "${GNUARMEMB_TOOLCHAIN_PATH}") gnuarmemb
