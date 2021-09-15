@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NCS_ROOT: "${{ github.workspace }}/ncs"
+      ZEPHYR_BASE: "${{ github.workspace }}/ncs/zephyr"
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
