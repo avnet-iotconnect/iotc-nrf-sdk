@@ -4,7 +4,7 @@ export DTC_INSTALL_URL=http://mirrors.kernel.org/ubuntu/pool/main/d/device-tree-
 
 
 export CMAKE_INSTALL_PATH=${CMAKE_INSTALL_PATH:-/opt/cmake/cmake-3.13.1-Linux-x86_64}
-export GNUARMEMB_TOOLCHAIN_PATH=${GNUARMEMB_TOOLCHAIN_PATH:=/opt/gcc-arm-none-eabi-8-2019-q3-update}
+export GNUARMEMB_TOOLCHAIN_PATH=${GNUARMEMB_TOOLCHAIN_PATH:=/opt/gcc-arm-none-eabi-9-2019-q4-major}
 
 
 
