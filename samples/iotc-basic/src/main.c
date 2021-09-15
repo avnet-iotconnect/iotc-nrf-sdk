@@ -349,9 +349,6 @@ static void print_lte_lc_evt_string(const struct lte_lc_evt *const evt) {
             printk("Received LTE_LC_EVT_MODEM_SLEEP_ENTER\n");
             break;
 
-        case LTE_LC_EVT_CELL_UPDATE:
-            printk("Received LTE_LC_EVT_CELL_UPDATE\n");
-            break;
     }
 
 #endif    

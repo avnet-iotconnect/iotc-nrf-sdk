@@ -385,6 +385,10 @@ static void print_lte_lc_evt_string(const struct lte_lc_evt *const evt) {
             printk("RRC update: mode => %s\n", (evt->rrc_mode == LTE_LC_RRC_MODE_IDLE ? "idle":"connected"));
             break;
 
+        case LTE_LC_EVT_CELL_UPDATE:
+            printk("Cell id => 0x%08X, Cell tac => 0x%08X\n", evt->cell.id, evt->cell.tac);
+            break;
+
         case LTE_LC_EVT_LTE_MODE_UPDATE:
             printk("Received LTE_LC_EVT_LTE_MODE_UPDATE\n");
             break;
@@ -407,10 +411,6 @@ static void print_lte_lc_evt_string(const struct lte_lc_evt *const evt) {
 
         case LTE_LC_EVT_MODEM_SLEEP_ENTER:
             printk("Received LTE_LC_EVT_MODEM_SLEEP_ENTER\n");
-            break;
-
-        case LTE_LC_EVT_CELL_UPDATE:
-            printk("Received LTE_LC_EVT_CELL_UPDATE\n");
             break;
     }
 
