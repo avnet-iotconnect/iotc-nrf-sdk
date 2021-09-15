@@ -54,6 +54,8 @@ set(WITH_FEATURE_ZEPHYR)
 # TODO: figure out how to deal with path warnings
 cmake_policy(SET CMP0076 NEW)
 
+set(ZEPHYR_EXTRA_MODULES ${CMAKE_CURRENT_SOURCE_DIR}/../../common/drivers/sensor)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(iotc-sensors-gps)
