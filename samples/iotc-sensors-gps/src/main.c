@@ -13,6 +13,8 @@
 
 #include <modem/nrf_modem_lib.h>
 #include <modem/lte_lc.h>
+#include <modem/at_cmd.h>
+#include <modem/at_notif.h>
 
 #include <power/reboot.h>
 #include <dfu/mcuboot.h>
@@ -82,7 +84,7 @@ static float gps_lng = INVALID_LAT_LON;
 static int setup_modem_gps(void);
 
 
-#if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
+#if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
 
 /* Initialize AT communications */
 static int at_comms_init(void) {
@@ -815,7 +817,7 @@ void main(void) {
 
     k_msleep(4000); // allow time for the user to connect the comm port to see the generated DUID and initialization errors
 
-#if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
+#if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
     err = nrf_modem_lib_init();
 #else
     /* If bsdlib is initialized on post-kernel we should
@@ -828,7 +830,7 @@ void main(void) {
         return;
     }
 
-#if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
+#if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
     err = at_comms_init();
     if (err) {
         printk("Failed to initialize modem!\n");

@@ -156,6 +156,6 @@ static const struct sensor_driver_api te23142771_driver_api = {
     .channel_get  = te23142771_channel_get,
 };
 
-DEVICE_AND_API_INIT(te23142771, DT_INST_LABEL(0), te23142771_init,
+DEVICE_DT_INST_DEFINE(0, te23142771_init, NULL,
                     &te23142771_data, &te23142771_config, POST_KERNEL,
                     CONFIG_SENSOR_INIT_PRIORITY, &te23142771_driver_api);

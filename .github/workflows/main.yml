@@ -33,7 +33,9 @@ jobs:
       - name: Build the Basic Sample Project
         run: |
           cd samples/iotc-basic &&
-          ../../scripts/build-project.sh thingy91
+          ../../scripts/build-project.sh dk &&
+          ../../scripts/build-project.sh thingy91 &&
+          ../../scripts/build-project.sh avt9152
 
       - name: Build the Sensors and GPS Sample
         env:
@@ -41,7 +43,9 @@ jobs:
           NRF_SAMPLE_ENV: ${{ secrets.NRF_SAMPLE_ENV }}
         run: |
           cd samples/iotc-sensors-gps &&
-          ../../scripts/build-project.sh thingy91
+          ../../scripts/build-project.sh dk &&
+          ../../scripts/build-project.sh thingy91 &&
+          ../../scripts/build-project.sh avt9152
 
       - name: Publish Sample Artifacts
         uses: actions/upload-artifact@v2
