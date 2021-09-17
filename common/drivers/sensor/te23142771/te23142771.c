@@ -74,7 +74,7 @@ static int te23142771_sample_fetch(const struct device *dev,
     } while ((err == 0) && (reg_value > 0));
     if (err < 0) {
         LOG_ERR("Failed to start sample.");
-        return err;        
+        return err;
     }
 
     if (i2c_burst_read(data->i2c_master, config->i2c_slave_addr, \
@@ -83,9 +83,24 @@ static int te23142771_sample_fetch(const struct device *dev,
         return -EIO;
     }
 
-    data->sample_temperature = (rx[0] * 256.0 + rx[1]) / 10.0;
-    data->sample_humidity = (rx[2] * 256.0 + rx[3]) / 10.0;
-    data->sample_light = (rx[4] * 256.0 + rx[5]);
+    switch (chan) {
+        case SENSOR_CHAN_AMBIENT_TEMP:
+            data->sample_temperature = (rx[0] * 256.0 + rx[1]) / 10.0;
+            break;
+        case SENSOR_CHAN_HUMIDITY:
+            data->sample_humidity = (rx[0] * 256.0 + rx[1]) / 10.0;
+            break;
+        case SENSOR_CHAN_LIGHT:
+            data->sample_light = (rx[0] * 256.0 + rx[1]);
+            break;
+        case SENSOR_CHAN_ALL:
+            data->sample_temperature = (rx[0] * 256.0 + rx[1]) / 10.0;
+            data->sample_humidity = (rx[2] * 256.0 + rx[3]) / 10.0;
+            data->sample_light = (rx[4] * 256.0 + rx[5]);
+            break;
+        default:
+            return -ENOTSUP;
+    }
 
     return 0;
 }
