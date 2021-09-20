@@ -10,9 +10,11 @@
 
 #include <zephyr.h>
 #include <net/mqtt.h>
-#include <modem/bsdlib.h>
+
+#include <modem/nrf_modem_lib.h>
 #include <modem/lte_lc.h>
 #include <modem/at_cmd.h>
+#include <modem/at_notif.h>
 #if IS_ENABLED(CONFIG_BOARD_THINGY91_NRF9160NS)
 #include "led_pwm.h"
 #else
@@ -40,10 +42,10 @@
 #define PRINT_LTE_LC_EVENTS
 
 #define SDK_VERSION STRINGIFY(APP_VERSION)
-#define MAIN_APP_VERSION "01.01.02" // Use two-digit or letter version so that we can use strcmp to see if version is greater
+#define MAIN_APP_VERSION "01.02.00" // Use two-digit or letter version so that we can use strcmp to see if version is greater
 #define LED_MAX 20U
 
-static char duid[30] = "nrf-dk-test"; // When using this code, your device ID will be nrf-IMEI.
+static char duid[65] = CONFIG_IOTCONNECT_CUSTOM_DUID; // When using this code, your device ID will be nrf-IMEI.
 static char *cpid = CONFIG_IOTCONNECT_CPID;
 static char *env = CONFIG_IOTCONNECT_ENV;
 
@@ -59,7 +61,7 @@ static bool lte_link_up = false;
 static bool connecting_to_iotconnect = false;
 static bool time_updated = false;
 
-#if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
+#if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
 
 /* Initialize AT communications */
 static int at_comms_init(void) {
@@ -322,6 +324,31 @@ static void print_lte_lc_evt_string(const struct lte_lc_evt *const evt) {
         case LTE_LC_EVT_CELL_UPDATE:
             printk("Cell id => 0x%08X, Cell tac => 0x%08X\n", evt->cell.id, evt->cell.tac);
             break;
+
+        case LTE_LC_EVT_LTE_MODE_UPDATE:
+            printk("Received LTE_LC_EVT_LTE_MODE_UPDATE\n");
+            break;
+
+        case LTE_LC_EVT_TAU_PRE_WARNING:
+            printk("Received LTE_LC_EVT_TAU_PRE_WARNING\n");
+            break;
+
+        case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+            printk("Received LTE_LC_EVT_NEIGHBOR_CELL_MEAS\n");
+            break;
+
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT_PRE_WARNING:
+            printk("Received LTE_LC_EVT_MODEM_SLEEP_EXIT_PRE_WARNING\n");
+            break;
+
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT:
+            printk("Received LTE_LC_EVT_MODEM_SLEEP_EXIT\n");
+            break;
+
+        case LTE_LC_EVT_MODEM_SLEEP_ENTER:
+            printk("Received LTE_LC_EVT_MODEM_SLEEP_ENTER\n");
+            break;
+
     }
 
 #endif    
@@ -381,6 +408,12 @@ static void nrf_lte_evt_cb(const struct lte_lc_evt *const evt) {
         case LTE_LC_EVT_PSM_UPDATE:
         case LTE_LC_EVT_EDRX_UPDATE:
         case LTE_LC_EVT_RRC_UPDATE:
+        case LTE_LC_EVT_LTE_MODE_UPDATE:
+        case LTE_LC_EVT_TAU_PRE_WARNING:
+        case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT_PRE_WARNING:
+        case LTE_LC_EVT_MODEM_SLEEP_EXIT:
+        case LTE_LC_EVT_MODEM_SLEEP_ENTER:
             break;
     }
 
@@ -539,21 +572,22 @@ void main(void) {
     ui_leds_init();
     k_msleep(10); // let PWM initialize
     ui_led_set_rgb(LED_MAX, LED_MAX, 0);
+    k_msleep(4000); // allow time for the user to connect the comm port to see the generated DUID and initialization errors
 
-#if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
-    err = bsdlib_init();
+#if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
+    err = nrf_modem_lib_init();
 #else
-    /* If bsdlib is initialized on post-kernel we should
-     * fetch the returned error code instead of bsdlib_init
+    /* If nrf_modem_lib is initialized on post-kernel we should
+     * fetch the returned error code instead of nrf_modem_lib
      */
-    err = bsdlib_get_init_ret();
+    err = nrf_modem_lib_get_init_ret();
 #endif
     if (err) {
-        printk("Failed to initialize bsdlib!\n");
+        printk("Failed to initialize nrf_modem_lib!\n");
         return;
     }
 
-#if !defined(CONFIG_BSD_LIBRARY_SYS_INIT)
+#if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
     err = at_comms_init();
     if (err) {
         printk("Failed to initialize modem!\n");
@@ -606,8 +640,10 @@ void main(void) {
             printk("Device provisioned successfully\n");
         }
 #endif
-    strcpy(duid, "nrf-");
-    strcat(duid, imei);
+    if (strlen(CONFIG_IOTCONNECT_CUSTOM_DUID) == 0) {
+        strcpy(duid, "nrf-");
+        strcat(duid, imei);
+    }
     printk("DUID: %s\n", duid);
 
     dk_buttons_init(button_handler);

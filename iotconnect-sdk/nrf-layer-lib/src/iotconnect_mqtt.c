@@ -10,8 +10,7 @@
 
 #include <net/mqtt.h>
 #include <net/socket.h>
-#include <modem/bsdlib.h>
-
+#include <modem/modem_key_mgmt.h>
 #include <modem/lte_lc.h>
 
 #include <cJSON.h>
@@ -33,9 +32,9 @@ static unsigned int rolling_message_id = 1;
 static struct mqtt_utf8 mqtt_user_name;
 #endif
 static IotclSyncResponse *sync_response;
-static u8_t tx_buffer[MAXLINE];
-static u8_t rx_buffer[MAXLINE];
-static u8_t payload_buf[MAXLINE];
+static uint8_t tx_buffer[MAXLINE];
+static uint8_t rx_buffer[MAXLINE];
+static uint8_t payload_buf[MAXLINE];
 static struct pollfd fds;
 static struct sockaddr_storage broker;
 
@@ -64,8 +63,8 @@ static unsigned int get_next_message_id() {
 /**@brief Function to read the published payload.
  */
 static int get_event_payload(struct mqtt_client *c, size_t length) {
-    u8_t *buf = payload_buf;
-    u8_t *end = buf + length;
+    uint8_t *buf = payload_buf;
+    uint8_t *end = buf + length;
 
     if (length > sizeof(payload_buf)) {
         return -EMSGSIZE;
@@ -192,7 +191,7 @@ static bool client_init() {
     client.user_name = &mqtt_user_name;
     client.password = NULL;
 #else
-    client.client_id.utf8 = (u8_t *)CONFIG_MQTT_CLIENT_ID;
+    client.client_id.utf8 = (uint8_t *)CONFIG_MQTT_CLIENT_ID;
     client.client_id.size = strlen(CONFIG_MQTT_CLIENT_ID);
     client.password = NULL;
     client.user_name = NULL;
@@ -237,9 +236,9 @@ int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qo
     do {
 
         param.message.topic.qos = qos;
-        param.message.topic.topic.utf8 = (u8_t *) topic;
+        param.message.topic.topic.utf8 = (uint8_t *) topic;
         param.message.topic.topic.size = strlen(param.message.topic.topic.utf8);
-        param.message.payload.data = (u8_t *) data;
+        param.message.payload.data = (uint8_t *) data;
         param.message.payload.len = len;
         param.message_id = get_next_message_id();
         param.dup_flag = 0;

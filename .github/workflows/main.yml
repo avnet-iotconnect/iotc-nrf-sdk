@@ -11,11 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NCS_ROOT: "${{ github.workspace }}/ncs"
+      ZEPHYR_BASE: "${{ github.workspace }}/ncs/zephyr"
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: nRF SDK Setup
+      - name: nRF Machine Setup
         run: sudo scripts/setup-machine.sh
 
       - name: nRF SDK Setup

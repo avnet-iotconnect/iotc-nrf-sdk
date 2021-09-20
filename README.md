@@ -6,13 +6,12 @@ The sample shows how to make use of the IoTConnect SDK to connect your DK, Thing
 
 ### Building
 
-* Install the nRF SDK v1.4.1 for your operating system. On linux, you can make use of the automated scripts
+* Install the nRF SDK v1.6.1 for your operating system. On linux, you can make use of the automated scripts
 in the scripts directory.
-* nRF SDK 1.3.x is not directly supported. If you wish to use the 1.3.X nRF SDK version, search for **1.3.X** in prj.conf and nrf_fota.c and make appropriate source modification. 
 * Download the sources from the Releases of this repository.
-* If on Lunux, run patch-gettimeofday.sh with defined ZEPHYR_BASE or apply the same changes, if on another OS.
-The default implementation of the gettimeofday in the nRF SDK needs to be declared as `weak` in order for us 
-to have proper time integration.
+* The default nRF SDK implementation of the gettimeofday in the nRF SDK needs to be declared as `weak` in order for us 
+to have proper time integration. If on Lunux, you can run patch-gettimeofday.sh in the scripts directory 
+with defined ZEPHYR_BASE.
 * Open the project using the Segger Embedded Studio with *File->Open nRF Connect SDK Project* using:
   * CmakeLists.txt from one of the samples
   * Board Directory: 
@@ -108,27 +107,33 @@ CA Certificate and device needs to be added to IoTConnect.
 
 Follow these instructions to set up the board:
 
-* The device Unique ID (DUID) will be generated automatically for your nRF board based on IMEI of the board. 
-You need to obtain the device unique ID for your board first. Build and run the project initially and capture the 
+* You can assign a custom device Unique ID (DUID) in menuconfig (see below). If left blank, 
+the DUID will be generated automatically for your nRF board based on IMEI of the board. 
+If you are not using a custom DUID, you will need to obtain the device unique ID for your board first.
+Build and run the project initially and capture the 
 printout on the USB console where the message is printed "DUID: nrf-xxxxxx". Your device ID is 
 your IMEI prefixed with "nrf-". Alternatively, you can run AT+CGSN AT command to obtain the IMEI.
-* Follow the instructions at https://github.com/Avnet/iotc-c-lib in the tools/ecc-certs directory 
+* If using Self Signed authentication type, the device certificate and private key can be generated using 
+the IoTConnect web UI during the device. You should not be supplying a password in the UI. 
+Copy the Client Certificate and the Private Key into newly created files: *DUID*-crt.pem and *DUID*-key.pem 
+anywhere on your pc. You will use these files in the steps below.
+* If using CA Cert authentication, follow the instructions at https://github.com/Avnet/iotc-c-lib in the tools/ecc-certs directory 
 to create the certificates for your board. The instructions also contain steps to add your CA Certificate to IoTConnect.
-* Create a new CA Certificate based template in IoTConnect and select the uploaded certificate. Add at least one 
-telemetry field "cpu". For the nrf-sensors-gps sample, see the values in the publish_telemetry() function in main.c.
+* Create a new Self Signed or CA Certificate based template in IoTConnect. Add at least one telemetry field 
+"cpu". For the nrf-sensors-gps sample, see the values in the publish_telemetry() function in main.c.
 * Create a new device with Unique ID described in the first tep of this guide and assign the newly created template to it. 
 * Download the Baltimore Cyber Trust Root certificate from https://cacerts.digicert.com/BaltimoreCyberTrustRoot.crt.pem 
 * Install nRF Connect from Nordic's web site and install the the LTE Link Monitor. 
 * Run the LTE Link Monitor.
 * Power on your device, connect the USB cable to your PC and select your device from the pulldown on the top left.
-* Click the Certificate Manager tab in the  top right corner of the window.
-* Follow the instructions displayed at the top of the window to bring the modem into offline mode with AT+CFUN=4.
-* Copy and paste the contents of the following certificates (including the BEGIN and END lines):
-  * CA Certificate: BaltimoreCyberTrustRoot.crt.pem
-  * Client Certificate: the generated nrf-*IMEI*-crt.pem
-  * Private Key: the generated nrf-*IMEI*-key.pem
-* Enter 10701 into the Security Tag field.
-* Click the Update Certificates button in the bottom right of the window.
+* Click the Certificate Manager tab in the top right corner of the window:
+  * Follow the instructions displayed at the top of the window to bring the modem into offline mode with AT+CFUN=4.
+  * Copy and paste the contents of the following certificates (including the BEGIN and END lines):
+    * CA Certificate: BaltimoreCyberTrustRoot.crt.pem
+    * Client Certificate: the generated *DUID*-crt.pem
+    * Private Key: the generated *DUID*-key.pem
+  * Enter 10701 into the Security Tag field.
+  * Click the Update Certificates button in the bottom right of the window.
 
 Alternatively you can set PROVISION_TEST_CERTIFICATES in menuconfig and provide your certs in src/test_certs.c of your 
 project. This method is not recommended for production.
@@ -155,6 +160,8 @@ MCUBOOT when you have the default asset tracker programmed onto the board.
 This file needs to match the asset_tracker's configuration in order for OTA to work. If you intend to use the code
 by programming all of the the boards with JTAG, these files are not needed.
 
+Only the Thingy91 (asset_tracker) and AVT9152 evb (demo_IoTConnect) has mcuboot serial recovery enabled 
+in their respective default application.
 
 [evb_user_manual_link]:
 https://www.avnet.com/wps/wcm/connect/onesite/3788e3c1-a386-4196-a88f-21307ff28984/AVT9152+EVB+User+Manual+v1.0.pdf?MOD=AJPERES&CACHEID=ROOTWORKSPACE.Z18_NA5A1I41L0ICD0ABNDMDDG0000-3788e3c1-a386-4196-a88f-21307ff28984-nvGFXpQ

@@ -41,7 +41,9 @@ endif ()
 set(PM_STATIC_YML_FILE
         ${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/pm_static.yml
         )
-
+list(APPEND mcuboot_OVERLAY_CONFIG
+        "$ENV{ZEPHYR_BASE}/../nrf/subsys/partition_manager/partition_manager_enabled.conf"
+        )
 list(APPEND mcuboot_OVERLAY_CONFIG
         "${CMAKE_CURRENT_SOURCE_DIR}/mcuboot_overlay-rsa.conf"
         )
@@ -54,7 +56,8 @@ set(WITH_FEATURE_ZEPHYR)
 # TODO: figure out how to deal with path warnings
 cmake_policy(SET CMP0076 NEW)
 
-set(ZEPHYR_EXTRA_MODULES ../../common/drivers/sensor)
+set(ZEPHYR_EXTRA_MODULES ${CMAKE_CURRENT_SOURCE_DIR}/../../common/drivers/sensor)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(iotc-sensors-gps)
