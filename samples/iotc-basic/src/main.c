@@ -454,7 +454,7 @@ static void lte_link_and_connection_handler() {
                 connecting_to_iotconnect = true;
                 err = iotconnect_sdk_init();
                 if (err) {
-                    printk("Failed to connect to IoTConnect MQTT broker, err %d", err);
+                    printk("Failed to connect to IoTConnect MQTT broker, err %d\n", err);
                     sdk_running = false;
                     connecting_to_iotconnect = false;
                     k_msleep(1000);
@@ -677,7 +677,7 @@ void main(void) {
             }
         }
         if (do_reboot) {
-            printk("The board will reboot in 2 seconds\r\n");
+            printk("The board will reboot in 2 seconds\n");
             do_reboot = false; // pointless, but just in case...
             k_msleep(2000);
             sys_reboot(SYS_REBOOT_COLD);
