@@ -5,10 +5,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <cJSON.h>
 
 #include <zephyr.h>
-#include <iotconnect_socket_https.h>
+#include <net/mqtt.h> // only for MQTT_QOS_* defines
+
+#include "iotconnect_socket_https.h"
 
 #include "nrf_cert_store.h"
 #include "iotconnect_socket_https.h"
@@ -24,8 +25,9 @@
 
 
 /* Buffers for MQTT client. */
-IotclDiscoveryResponse *discovery_response = NULL;
-IotclSyncResponse *sync_response = NULL;
+
+static IotclDiscoveryResponse *discovery_response = NULL;
+static IotclSyncResponse *sync_response = NULL;
 struct mqtt_client client;
 
 static IotconnectClientConfig config = {0};
@@ -201,7 +203,7 @@ void iotconnect_sdk_disconnect() {
 }
 
 void iotconnect_sdk_send_packet(const char *data) {
-    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, 1, data, strlen(data))) {
+    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, MQTT_QOS_0_AT_MOST_ONCE, data, strlen(data))) {
         printk("\n\t Device_Attributes_Data Publish failure");
     }
 }
