@@ -39,13 +39,13 @@ if (CLION)
 endif ()
 
 set(PM_STATIC_YML_FILE
-        ${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/pm_static.yml
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../common/project-files/configuration/${BOARD}/pm_static.yml
         )
 list(APPEND mcuboot_OVERLAY_CONFIG
         "$ENV{ZEPHYR_BASE}/../nrf/subsys/partition_manager/partition_manager_enabled.conf"
         )
 list(APPEND mcuboot_OVERLAY_CONFIG
-        "${CMAKE_CURRENT_SOURCE_DIR}/mcuboot_overlay-rsa.conf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../common/project-files//mcuboot_overlay-rsa.conf"
         )
 
 # we use some pragmas to suppress CLion warnings
@@ -74,6 +74,6 @@ target_sources(app PRIVATE src/test_certs.c)
 zephyr_include_directories(../../cJSON)
 zephyr_library_sources(../../cJSON/cJSON.c)
 
-add_subdirectory_ifdef(CONFIG_BOARD_THINGY91_NRF9160NS src/ui)
+add_subdirectory_ifdef(CONFIG_BOARD_THINGY91_NRF9160NS ../../common/ui build/common/ui)
 
 add_subdirectory(../../iotconnect-sdk build/iotconnect-sdk)
