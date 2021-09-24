@@ -42,9 +42,6 @@ set(PM_STATIC_YML_FILE
         ${CMAKE_CURRENT_SOURCE_DIR}/../../common/project-files/configuration/${BOARD}/pm_static.yml
         )
 list(APPEND mcuboot_OVERLAY_CONFIG
-        "$ENV{ZEPHYR_BASE}/../nrf/subsys/partition_manager/partition_manager_enabled.conf"
-        )
-list(APPEND mcuboot_OVERLAY_CONFIG
         "${CMAKE_CURRENT_SOURCE_DIR}/../../common/project-files//mcuboot_overlay-rsa.conf"
         )
 
