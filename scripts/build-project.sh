@@ -40,6 +40,9 @@ esac
 
 build_dir=build_$target
 
+# workaround for the interactive shell invocation with mcuboot_menuconfig
+export TERM=linux ; export TERMINFO=/etc/terminfo
+
 # workaround for MCUboot config being invalid when building the first time
 # have to do it once plainly and second time to trigger the config enabled
 echo q | west build -t mcuboot_menuconfig -b ${target_board} -d ${build_dir}
