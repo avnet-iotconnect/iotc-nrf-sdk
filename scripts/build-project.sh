@@ -41,17 +41,8 @@ esac
 build_dir=build_$target
 
 # workaround for the interactive shell invocation with mcuboot_menuconfig
-sudo apt-get install libncurses5
-export TERM=linux ; export TERMINFO=/etc/terminfo
-
-# workaround for MCUboot config being invalid when building the first time
-# have to do it once plainly and second time to trigger the config enabled
-echo q | west build -t mcuboot_menuconfig -b ${target_board} -d ${build_dir}
-grep CONFIG_PARTITION_MANAGER_ENABLED "${build_dir}/mcuboot/zephyr/.config"
-
-# workaround for MCUboot config being invalid when building the first time
-echo q | west build -t mcuboot_menuconfig -b ${target_board} -d ${build_dir} -- -DCONFIG_PARTITION_MANAGER_ENABLED=y
-grep CONFIG_PARTITION_MANAGER_ENABLED "${build_dir}/mcuboot/zephyr/.config"
+west build -t rebuild_cache -b ${target_board} -d ${build_dir} -- \
+  -DCONFIG_PARTITION_MANAGER_ENABLED=y
 
 west build -p auto -b $target_board -d $build_dir -- \
   -DCONFIG_IOTCONNECT_CPID=\"${NRF_SAMPLE_CPID}\" \
