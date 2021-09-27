@@ -41,6 +41,7 @@ esac
 build_dir=build_$target
 
 # workaround for the interactive shell invocation with mcuboot_menuconfig
+sudo apt-get install libncurses5
 export TERM=linux ; export TERMINFO=/etc/terminfo
 
 # workaround for MCUboot config being invalid when building the first time
