@@ -15,20 +15,22 @@ source "${NCS_ROOT}"/zephyr/zephyr-env.sh
 "${this_dir}"/patch-gettimeofday.sh
 
 case $target in
-
 dk)
   echo "Building for DK..."
   target_board=nrf9160dk_nrf9160ns
+  board_root_flag=
   ;;
 
 thingy91)
   echo "Building for THINGY:91..."
   target_board=thingy91_nrf9160ns
+  board_root_flag=
   ;;
 
 avt9152)
   target_board=nrf9160_avt9152ns
   echo "Building for AVT9152-EVB..."
+  board_root_flag="-DBOARD_ROOT=${this_dir}/.."
   ;;
 
 *)
@@ -42,12 +44,14 @@ build_dir=build_$target
 
 # workaround for the interactive shell invocation with mcuboot_menuconfig
 west build -t rebuild_cache -b ${target_board} -d ${build_dir} -- \
-  -DCONFIG_PARTITION_MANAGER_ENABLED=y
+  -DCONFIG_PARTITION_MANAGER_ENABLED=y \
+    "${board_root_flag}"
 
 west build -p auto -b $target_board -d $build_dir -- \
   -DCONFIG_IOTCONNECT_CPID=\"${NRF_SAMPLE_CPID}\" \
   -DCONFIG_IOTCONNECT_ENV=\"${NRF_SAMPLE_ENV}\" \
-  -DCONFIG_LTE_NETWORK_MODE_LTE_M=y
+  -DCONFIG_LTE_NETWORK_MODE_LTE_M=y \
+    "${board_root_flag}"
 
 # validate that mcuboot is being built properly
 cpme=$(grep CONFIG_PARTITION_MANAGER_ENABLED "${build_dir}/mcuboot/zephyr/.config")
