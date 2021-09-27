@@ -32,7 +32,7 @@ avt9152)
   ;;
 
 *)
-  echo "Usge: $0 <dk|thingy91|avt9152>"
+  echo "Usge: $0 <dk|thingy91|avt9152>" >&2
   exit 1
   ;;
 
@@ -40,13 +40,27 @@ esac
 
 build_dir=build_$target
 
-# workaround for spm config being invalid, maybe applicable only on windows?
-# echo q | west build -t spm_menuconfig -b $target_board -d $build_dir
+# workaround for MCUboot config being invalid when building the first time
+# have to do it once plainly and second time to trigger the config enabled
+echo q | west build -t mcuboot_menuconfig -b ${target_board} -d ${build_dir}
+grep CONFIG_PARTITION_MANAGER_ENABLED "${build_dir}/mcuboot/zephyr/.config"
+
+# workaround for MCUboot config being invalid when building the first time
+echo q | west build -t mcuboot_menuconfig -b ${target_board} -d ${build_dir} -- -DCONFIG_PARTITION_MANAGER_ENABLED=y
+grep CONFIG_PARTITION_MANAGER_ENABLED "${build_dir}/mcuboot/zephyr/.config"
 
 west build -p auto -b $target_board -d $build_dir -- \
   -DCONFIG_IOTCONNECT_CPID=\"${NRF_SAMPLE_CPID}\" \
   -DCONFIG_IOTCONNECT_ENV=\"${NRF_SAMPLE_ENV}\" \
   -DCONFIG_LTE_NETWORK_MODE_LTE_M=y
+
+# validate that mcuboot is being built properly
+cpme=$(grep CONFIG_PARTITION_MANAGER_ENABLED "${build_dir}/mcuboot/zephyr/.config")
+if [[ "${cpme}" != "CONFIG_PARTITION_MANAGER_ENABLED=y" ]]; then
+    echo 'MCUboot Build is likely incorrect. Aboriting build!'
+    exit 2
+fi
+
 
 mkdir -p precompiled_image
 cp $build_dir/zephyr/merged.hex precompiled_image/merged_$target.hex
