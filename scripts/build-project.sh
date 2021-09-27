@@ -42,7 +42,8 @@ esac
 
 build_dir=build_$target
 
-# workaround for the interactive shell invocation with mcuboot_menuconfig
+# Workaround for MCUboot config being invalid when building the first time.
+# Otherwise one has to build twice to get a valid build.
 west build -t rebuild_cache -b ${target_board} -d ${build_dir} -- \
   -DCONFIG_PARTITION_MANAGER_ENABLED=y \
     "${board_root_flag}"

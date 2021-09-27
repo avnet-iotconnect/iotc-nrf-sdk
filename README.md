@@ -152,9 +152,16 @@ You can increase the MAIN_APP_VERSION number, rebuild the app, upload app_signed
 OTA to your board. The board will update itself if the new version is greater (string comparison) 
 than the currently running version. 
 
+### Known Issues
+
+* When building from the Segger Embedded Studio IDE, the user needs to acces at least once 
+ *Project->Configure nRF Connect SDK project->menuconfig* and confirm at least once, in
+ order to ensure that CONFIG_PARTITION_MANAGER_ENABLED is set to "y" in mcuboot configuration.
+ This can be validated in *board_build*/mcuboot/zephyr/.config.
+
 ### Other Things to Note
 
-The files mcuboot_overlay-rsa.conf and pm_static.yaml in configuration directory is needed to 
+The pm_static.yaml in configuration directory is needed to 
 allow you to simply build the project and program the app_signed.hex with over USB  
 MCUBOOT when you have the default asset tracker programmed onto the board. 
 This file needs to match the asset_tracker's configuration in order for OTA to work. If you intend to use the code
