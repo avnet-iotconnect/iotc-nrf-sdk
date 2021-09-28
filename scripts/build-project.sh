@@ -42,11 +42,12 @@ esac
 
 build_dir=build_$target
 
+# No longer needed with CONFIG_PARTITION_MANAGER_ENABLED=y in mcuboot_overlay-rsa.conf
 # Workaround for MCUboot config being invalid when building the first time.
 # Otherwise one has to build twice to get a valid build.
-west build -t rebuild_cache -b ${target_board} -d ${build_dir} -- \
-  -DCONFIG_PARTITION_MANAGER_ENABLED=y \
-    "${board_root_flag}"
+# west build -t rebuild_cache -b ${target_board} -d ${build_dir} -- \
+#  -DCONFIG_PARTITION_MANAGER_ENABLED=y \
+#    "${board_root_flag}"
 
 west build -p auto -b $target_board -d $build_dir -- \
   -DCONFIG_IOTCONNECT_CPID=\"${NRF_SAMPLE_CPID}\" \
