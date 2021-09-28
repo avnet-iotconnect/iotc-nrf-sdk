@@ -4,6 +4,40 @@ This repository contains IoTConnect nRF SDK and samples intended for use with Av
 
 The sample shows how to make use of the IoTConnect SDK to connect your DK, Thingy:91 or AVT9152-EVB devices to IoTConnect.
 
+#### Software Release Compatibility Matrix
+
+This table shows this repository release and branch compatibility with different nRF SDK and Modem firmware versions. 
+
+Also please see [Modem Firmware Compatibility Matrix](https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcomp_matrix_nrf9160%2FCOMP%2Fnrf9160%2Fnrf9160_ic_revision_overview.html)
+at the Nordic's web site.
+
+| Release                                                             | Branch         | nRF SDK Version  |Modem Firmware| SiP Revision |
+| ------------------------------------------------------------------- | -------------  | ---------------  |--------------| -------------|
+| [v2.0.0](https://github.com/avnet-iotconnect/iotc-nrf-sdk/releases) | main           |1.6.1             |1.3.0         | 2(B1)        |
+| [v1.0.0](https://github.com/avnet-iotconnect/iotc-nrf-sdk/releases) | nrf-sdk-1.4.1  |1.4.1             |1.2.3         | 1(B0)        |
+
+**IMPORTANT:** When deciding which release or branch to use, please check your 
+[SiP revision](https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcomp_matrix_nrf9160%2FCOMP%2Fnrf9160%2Fnrf9160_ic_revision_overview.html)
+by issuing ```AT%HWVERSION``` AT command or examining the actual SiP package on the board. 
+
+#### Software and Hardware Testing
+
+This list shows the tested hardware, SiP hardware revision and Modem versions with each of our releases.
+
+The hardware version can be found on the white label applied to the board PCB.  
+
+| Release        |HW Version                |SiP Revision |Modem Firmware| Remarks |
+| -------------- |--------------------------|-------------|--------------|---------- |
+| v2.0.0         |Thingy91:1.4.0, 1.0.2     |1(B0)        |1.3.0         | 1.3.0 Modem FW is not recommended with SiP Revision, but no issues found during testing with Thingy HW version 1.4.0. Frequent resets with HW 1.0.2 |  
+| v2.0.0         |Thingy91:1.4.0            |1(B0)        |1.2.3         | SDK 1.6.1 does not recommend modem FW 1.2.3, but no issues found during testing |  
+| v1.0.0         |Thingy91:1.4.0, 1.0.2     |1(B0)        |1.2.3         | |
+| v1.0.0         |DK:0.9.0                  |1(B0)        |1.2.3         | |
+
+
+\* Observed a board reset once during startup
+\** Observed frequent board resets
+
+
 ### Building
 
 * Install the nRF SDK v1.6.1 for your operating system. On linux, you can make use of the automated scripts
