@@ -29,7 +29,7 @@ The hardware version can be found on the white label applied to the board PCB.
 | Release | HW Version                   | SiP Revision | Modem Firmware | Remarks |
 | --------| ---------------------------- | ------------ | -------------- |---------- |
 | v2.0.0  | Thingy91:1.4.0, 1.0.2        | 1(B0)        | 1.3.0          | 1.3.0 Modem FW is not recommended with SiP Revision, but no issues found during testing with Thingy HW version 1.4.0. Frequent resets with HW 1.0.2 |
-| v2.0.0  | Thingy91:1.0.0               | 1(B0)        | 1.2.3          | SDK 1.6.1 does not recommend modem FW 1.2.3, but no issues found during testing 
+| v2.0.0  | Thingy91:1.4.0, 1.0.2, 1.0.0 | 1(B0)        | 1.2.3          | NCS 1.6.1 does not recommend modem FW 1.2.3, but no issues found during testing 
 | v2.0.0  | DK: 1.0.0                    | 2(B1)        | 1.3.0          | |
 | v2.0.0  | AVT9152-EVB: v2.0            | 2(B1)        | 1.3.0          | |
 | v2.0.0  | AVT9152-EVB: v1.1            | 1(B0)        | 1.2.3          | |
