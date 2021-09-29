@@ -6,15 +6,15 @@ The sample shows how to make use of the IoTConnect SDK to connect your DK, Thing
 
 #### Software Release Compatibility Matrix
 
-This table shows this repository release and branch compatibility with different nRF SDK and Modem firmware versions. 
+This table shows this repository release and branch compatibility with different nRF Connect SDK (NCS) and Modem firmware versions. 
 
 Also please see [Modem Firmware Compatibility Matrix](https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcomp_matrix_nrf9160%2FCOMP%2Fnrf9160%2Fnrf9160_ic_revision_overview.html)
 at the Nordic's web site.
 
-| Release                                                             | Branch         | nRF SDK Version  |Modem Firmware| SiP Revision |
-| ------------------------------------------------------------------- | -------------  | ---------------  |--------------| -------------|
-| [v2.0.0](https://github.com/avnet-iotconnect/iotc-nrf-sdk/releases) | main           |1.6.1             |1.3.0         | 2(B1)        |
-| [v1.0.0](https://github.com/avnet-iotconnect/iotc-nrf-sdk/releases) | nrf-sdk-1.4.1  |1.4.1             |1.2.3         | 1(B0)        |
+| Release                                                                        | Branch         | NCS Version | Modem Firmware | SiP Revision |
+| ------------------------------------------------------------------------------ | -------------  | ----------- | -------------- | ------------ |
+| [v2.0.0](https://github.com/avnet-iotconnect/iotc-nrf-sdk/releases/tag/v2.0.0) | main           | 1.6.1       | 1.3.0          | 2(B1)        |
+| [v1.0.0](https://github.com/avnet-iotconnect/iotc-nrf-sdk/releases/tag/v1.0.0) | nrf-sdk-1.4.1  | 1.4.1       | 1.2.3          | 1(B0)        |
 
 **IMPORTANT:** When deciding which release or branch to use, please check your 
 [SiP revision](https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcomp_matrix_nrf9160%2FCOMP%2Fnrf9160%2Fnrf9160_ic_revision_overview.html)
@@ -22,28 +22,28 @@ by issuing ```AT%HWVERSION``` AT command or examining the actual SiP package on 
 
 #### Software and Hardware Testing
 
-This list shows the tested hardware, SiP hardware revision and Modem versions with each of our releases.
+This list shows the tested hardware, SiP hardware revision and Modem firmware versions with each of our releases.
 
 The hardware version can be found on the white label applied to the board PCB.  
 
-| Release        |HW Version                |SiP Revision |Modem Firmware| Remarks |
-| -------------- |--------------------------|-------------|--------------|---------- |
-| v2.0.0         |Thingy91:1.4.0, 1.0.2     |1(B0)        |1.3.0         | 1.3.0 Modem FW is not recommended with SiP Revision, but no issues found during testing with Thingy HW version 1.4.0. Frequent resets with HW 1.0.2 |  
-| v2.0.0         |Thingy91:1.4.0            |1(B0)        |1.2.3         | SDK 1.6.1 does not recommend modem FW 1.2.3, but no issues found during testing |  
-| v1.0.0         |Thingy91:1.4.0, 1.0.2     |1(B0)        |1.2.3         | |
-| v1.0.0         |DK:0.9.0                  |1(B0)        |1.2.3         | |
-
-
-\* Observed a board reset once during startup
-\** Observed frequent board resets
-
+| Release | HW Version                   | SiP Revision | Modem Firmware | Remarks |
+| --------| ---------------------------- | ------------ | -------------- |---------- |
+| v2.0.0  | Thingy91:1.4.0, 1.0.2        | 1(B0)        | 1.3.0          | 1.3.0 Modem FW is not recommended with SiP Revision, but no issues found during testing with Thingy HW version 1.4.0. Frequent resets with HW 1.0.2 |
+| v2.0.0  | Thingy91:1.0.0               | 1(B0)        | 1.2.3          | SDK 1.6.1 does not recommend modem FW 1.2.3, but no issues found during testing 
+| v2.0.0  | DK: 1.0.0                    | 2(B1)        | 1.3.0          | |
+| v2.0.0  | AVT9152-EVB: v2.0            | 2(B1)        | 1.3.0          | |
+| v2.0.0  | AVT9152-EVB: v1.1            | 1(B0)        | 1.2.3          | |
+| v1.0.0  | Thingy91:1.4.0, 1.0.2, 1.0.0 | 1(B0)        | 1.2.3          | |
+| v1.0.0  | DK:0.9.0                     | 1(B0)        | 1.2.3          | |
+| v1.0.0  | DK:1.0.0                     | 2(B1)        | 1.2.3          | |
+| v1.0.0  | AVT9152-EVB: v1.1            | 1(B0)        | 1.2.3          | |
 
 ### Building
 
-* Install the nRF SDK v1.6.1 for your operating system. On linux, you can make use of the automated scripts
+* Install NCS v1.6.1 for your operating system. On linux, you can make use of the automated scripts
 in the scripts directory.
 * Download the sources from the Releases of this repository.
-* The default nRF SDK implementation of the gettimeofday in the nRF SDK needs to be declared as `weak` in order for us 
+* The default NCS implementation of the gettimeofday needs to be declared as `weak` in order for us 
 to have proper time integration. If on Lunux, you can run patch-gettimeofday.sh in the scripts directory 
 with defined ZEPHYR_BASE.
 * Open the project using the Segger Embedded Studio with *File->Open nRF Connect SDK Project* using:
@@ -56,7 +56,7 @@ with defined ZEPHYR_BASE.
     * for DK: *nrf9160dk_nrf9160ns*
     * for Thingy:91: *thingy91_nrf9160ns*
     * for AVT9152-EVB: *nrf9160_avt9152ns*
-* Configure the project with *Project->Configure nRF SDK Project*
+* Configure the project with *Project->Configure nRF Connect SDK Project*
   * Select *menuconfig*
   * Expand the *IoTConnect Sample* tree
   * Enter your Company ID (CPID) and Environment name. You can access this information via *Settings->KeyVault* 
@@ -185,13 +185,6 @@ stay in this mode until the GPS fix is obtained or until the button is pressed a
 You can increase the MAIN_APP_VERSION number, rebuild the app, upload app_signed.bin into IoTConnect and push an 
 OTA to your board. The board will update itself if the new version is greater (string comparison) 
 than the currently running version. 
-
-### Known Issues
-
-* When building from the Segger Embedded Studio IDE, the user needs to acces at least once 
- *Project->Configure nRF Connect SDK project->menuconfig* and confirm at least once, in
- order to ensure that CONFIG_PARTITION_MANAGER_ENABLED is set to "y" in mcuboot configuration.
- This can be validated in *board_build*/mcuboot/zephyr/.config.
 
 ### Other Things to Note
 
