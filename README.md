@@ -43,9 +43,11 @@ The hardware version can be found on the white label applied to the board PCB.
 * Install NCS v1.6.1 for your operating system. On linux, you can make use of the automated scripts
 in the scripts directory.
 * Download the sources from the Releases of this repository.
-* The default NCS implementation of the gettimeofday needs to be declared as `weak` in order for us 
-to have proper time integration. If on Lunux, you can run patch-gettimeofday.sh in the scripts directory 
+* The default NCS implementation of the *_gettimeofday* at *$ZEPHYR_BASE/lib/libc/newlib/libc-hooks.c* 
+needs to be declared as `__weak` in order for usto have proper time integration. 
+If on Lunux, you can run patch-gettimeofday.sh in the scripts directory 
 with defined ZEPHYR_BASE.
+* If on Linux or Mac, ensure that ZEPHYR_BASE is defined as an environment variable before launching Segger Embedded Studio.
 * Open the project using the Segger Embedded Studio with *File->Open nRF Connect SDK Project* using:
   * CmakeLists.txt from one of the samples
   * Board Directory: 
