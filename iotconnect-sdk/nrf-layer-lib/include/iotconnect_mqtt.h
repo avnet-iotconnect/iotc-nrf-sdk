@@ -23,6 +23,7 @@ typedef struct {
     const char *env; // Environment name. Contact your representative for details. Same as telemetry config.
     IotconnectMqttOnDataCallback data_cb; // callback for OTA events.
     IotConnectStatusCallback status_cb; // callback for command events.
+    IotConnectMsgSendStatusCallback msg_send_status_cb;  // callback for message send status.
 } IotconnectMqttConfig;
 
 bool iotc_nrf_mqtt_init(IotconnectMqttConfig *config, IotclSyncResponse *sr);
@@ -31,7 +32,8 @@ void iotc_nrf_mqtt_loop();
 
 bool iotc_nrf_mqtt_is_connected();
 
-int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos, const uint8_t *data, size_t len);
+int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos, const uint8_t *data,
+                            size_t len, uint32_t *p_msg_id);
 
 void iotc_nrf_mqtt_abort();
 
