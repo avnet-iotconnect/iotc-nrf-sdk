@@ -211,7 +211,7 @@ void iotconnect_sdk_disconnect() {
 // being sent.
 void iotconnect_sdk_send_packet(const char *data, uint32_t *p_msg_id) {
     if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, MQTT_QOS_1_AT_LEAST_ONCE, data, strlen(data),
-    	p_msg_id)) {
+    ....p_msg_id)) {
         printk("\n\t Device_Attributes_Data Publish failure");
     }
 }
