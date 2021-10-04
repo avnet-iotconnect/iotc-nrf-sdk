@@ -26,6 +26,13 @@ typedef enum {
     // TODO: Sync statuses etc.
 } IotconnectConnectionStatus;
 
+typedef enum {
+    MSG_SEND_SUCCESS, //Received PUBACK for the respective message.
+    MSG_SEND_TIMEOUT, //Message drop from queue due to maximum retry with PUBACK timeout.
+    MSG_SEND_FAILED,  //Message drop from queue due to disconnection. 
+} IotconnectMsgSendStatus;
+
+typedef void (*IotConnectMsgSendStatusCallback)(uint32_t msg_id, IotconnectMsgSendStatus status);
 
 typedef void (*IotConnectStatusCallback)(IotconnectConnectionStatus data);
 
@@ -37,6 +44,7 @@ typedef struct {
     IotclCommandCallback cmd_cb; // callback for command events.
     IotclMessageCallback msg_cb; // callback for ALL messages, including the specific ones like cmd or ota callback.
     IotConnectStatusCallback status_cb; // callback for connection status
+    IotConnectMsgSendStatusCallback msg_send_status_cb; // callback for MQTT message send status.
 } IotconnectClientConfig;
 
 
@@ -48,7 +56,7 @@ bool iotconnect_sdk_is_connected();
 
 IotclConfig *iotconnect_sdk_get_lib_config();
 
-void iotconnect_sdk_send_packet(const char *data);
+void iotconnect_sdk_send_packet(const char *data, uint32_t *p_msg_id);
 
 void iotconnect_sdk_loop();
 
