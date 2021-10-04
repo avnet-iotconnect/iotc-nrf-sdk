@@ -20,10 +20,21 @@
 #include "nrf_cert_store.h"
 
 #define MQTT_PUBACK_TIMEOUT_S       5 //5 secs
+#define MAXIMUM_MSG_QUEUE           4
+#define MAXIMUM_MSG_RESEND          1
+typedef struct {
+    bool in_used;
+    uint32_t msg_id;
+    const char *p_pub_topic;
+    uint8_t *p_msg;
+    uint32_t msg_len;
+    uint32_t start_tick;
+    uint8_t resend_count;
+} msg_q_object_t;
 
-SYS_MUTEX_DEFINE(mutex_mqtt_pub);
-static unsigned int pending_ack_msg_id = 0;
-static bool msg_ack_pending = false;
+static msg_q_object_t msg_queue[MAXIMUM_MSG_QUEUE];
+SYS_MUTEX_DEFINE(mutex_msg_q);
+static bool msg_queue_initialized = false;
 
 extern struct mqtt_client client;
 static IotconnectMqttConfig *config;
@@ -52,6 +63,125 @@ static int fds_init(struct mqtt_client *c);
 
 static void mqtt_evt_handler(struct mqtt_client *const c, const struct mqtt_evt *evt);
 
+static int nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos,
+                          const uint8_t *data, size_t len, uint32_t *p_msg_id);
+
+static void msg_queue_clear(bool invoke_cb) {
+    if (msg_queue_initialized) {
+        //mutex lock
+        sys_mutex_lock(&mutex_msg_q, K_FOREVER);
+        for (int i=0; i<ARRAY_SIZE(msg_queue); i++) {
+            if (msg_queue[i].in_used) {
+                uint32_t msg_id = msg_queue[i].msg_id;
+                free(msg_queue[i].p_msg);
+                msg_queue[i].in_used = false;
+                if (invoke_cb && config->msg_send_status_cb) {
+                    config->msg_send_status_cb(msg_id, MSG_SEND_FAILED);
+                }
+            }
+        }
+        //printk("msg queue cleared\n");
+        //mutex unlock
+        sys_mutex_unlock(&mutex_msg_q);
+    } 
+}
+
+static void msg_queue_init(void) {
+    if (!msg_queue_initialized) {
+        for (int i=0; i<ARRAY_SIZE(msg_queue); i++) {
+            msg_queue[i].in_used = false;
+        }
+        msg_queue_initialized = true;
+        //printk("msg queue initialized\n");
+    }
+    else {
+        msg_queue_clear(false);
+    }
+}
+
+static bool msg_queue_add(uint32_t msg_id, const char *p_pub_topic,
+                            uint8_t *p_msg, uint32_t msg_len) {
+    bool msg_added = false;
+    if (msg_queue_initialized) {
+        //mutex lock
+        sys_mutex_lock(&mutex_msg_q, K_FOREVER);
+        for (int i=0; i<ARRAY_SIZE(msg_queue); i++) {
+            if (!msg_queue[i].in_used) {
+                msg_queue[i].p_msg = (uint8_t *)malloc(msg_len);
+                if (msg_queue[i].p_msg) {
+                    memcpy(msg_queue[i].p_msg, p_msg, msg_len);
+                    msg_queue[i].msg_len = msg_len;
+                    msg_queue[i].msg_id = msg_id;
+                    msg_queue[i].p_pub_topic = p_pub_topic;
+                    msg_queue[i].start_tick = k_uptime_get_32();
+                    msg_queue[i].resend_count = MAXIMUM_MSG_RESEND;
+                    msg_queue[i].in_used = true;
+                    msg_added = true;
+                    //printk("message added to queue. (msg id: %d)\n", msg_id);
+                }
+                else {
+                    printk("ERR: Unable to add message to queue!\n");
+                }
+                break;
+            }
+        }
+        //mutex unlock
+        sys_mutex_unlock(&mutex_msg_q);
+    }
+    return msg_added;
+}
+
+static void msg_queue_delete(uint32_t msg_id) {
+    if (msg_queue_initialized) {
+        //mutex lock
+        sys_mutex_lock(&mutex_msg_q, K_FOREVER);
+        for (int i=0; i<ARRAY_SIZE(msg_queue); i++) {
+            if (msg_queue[i].in_used && (msg_queue[i].msg_id == msg_id)) {
+                free(msg_queue[i].p_msg);
+                msg_queue[i].in_used = false;
+                //printk("message deleted from queue. (msg id: %d)\n", msg_id);
+                break;
+            }
+        }
+        //mutex unlock
+        sys_mutex_unlock(&mutex_msg_q);
+    }
+}
+
+static void msg_queue_proc(void) {
+    if (msg_queue_initialized) {
+        //mutex lock
+        sys_mutex_lock(&mutex_msg_q, K_FOREVER);
+        for (int i=0; i<ARRAY_SIZE(msg_queue); i++) {
+            if (msg_queue[i].in_used) {
+                if ((k_uptime_get_32() - msg_queue[i].start_tick) >= (MQTT_PUBACK_TIMEOUT_S * 1000)) {
+                    //printk("ERR: Send message timeout! (msg id: %d)\n", msg_queue[i].msg_id);
+                    if (msg_queue[i].resend_count) {
+                        printk("Re-send message again. (msg id: %d)\n", msg_queue[i].msg_id);
+                        uint32_t msg_id = msg_queue[i].msg_id;
+                        int err = nrf_mqtt_publish(&client, msg_queue[i].p_pub_topic, MQTT_QOS_1_AT_LEAST_ONCE,
+                                    msg_queue[i].p_msg, msg_queue[i].msg_len, &msg_id);
+                        if (err) {
+                            printk("message resend failed! %d\n", err);
+                        }
+                        msg_queue[i].start_tick = k_uptime_get_32();
+                        msg_queue[i].resend_count--;
+                    }
+                    else {
+                        //printk("Maximum re-send reached! Abort message! (msg id: %d)\n", msg_queue[i].msg_id);
+                        uint32_t msg_id = msg_queue[i].msg_id;
+                        msg_queue_delete(msg_id);
+                        if (config->msg_send_status_cb) {
+                            config->msg_send_status_cb(msg_id, MSG_SEND_TIMEOUT);
+                        }
+                    }
+                }
+            }
+        }
+        //mutex unlock
+        sys_mutex_unlock(&mutex_msg_q);
+    }
+}
 
 static unsigned int get_next_message_id() {
     if (rolling_message_id + 1 >= UINT_MAX) {
@@ -221,71 +351,55 @@ static bool client_init() {
     return true;
 }
 
+static int nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos,
+                          const uint8_t *data, size_t len, uint32_t *p_msg_id) {
+    struct mqtt_publish_param param;
+    int code;
+
+    param.message.topic.qos = qos;
+    param.message.topic.topic.utf8 = (uint8_t *) topic;
+    param.message.topic.topic.size = strlen(param.message.topic.topic.utf8);
+    param.message.payload.data = (uint8_t *) data;
+    param.message.payload.len = len;
+    // if p_msg_id contains non-zero value, the message is re-send from msg_queue_proc().
+    // Assign this message with assigned messsage id in p_msg_id.
+    // else assign current running message id to this message.
+    if (p_msg_id && *p_msg_id) {
+        param.message_id = *p_msg_id;
+    }
+    else {
+        param.message_id = get_next_message_id();
+    }
+    param.dup_flag = 0;
+    param.retain_flag = 0;
+
+    code = mqtt_publish(c, &param);
+
+    // Only add the message to msg queue when:
+    //   mqtt_publish() is successful.
+    //   p_msg_id is NULL or contains zero. (not re-send from msg_queue_proc())
+    //  QOS is 1.
+    if (!code && !(p_msg_id && *p_msg_id) && (qos == MQTT_QOS_1_AT_LEAST_ONCE)) {
+        msg_queue_add(param.message_id, topic, (uint8_t *)data, len);
+        // Return back the assigned message id if p_msg_id is not NULL.
+        if (p_msg_id) {
+            *p_msg_id = param.message_id;
+        }
+    }
+
+    return code;
+}
 
 /**@brief Function to publish data on the configured topic
  */
 int iotc_nrf_mqtt_publish(struct mqtt_client *c, const char *topic, enum mqtt_qos qos,
-                          const uint8_t *data, size_t len) {
-    struct mqtt_publish_param param;
-    int retry_count = 2;
-    int code;
+                          const uint8_t *data, size_t len, uint32_t *p_msg_id) {
 
-    //mutex lock
-    sys_mutex_lock(&mutex_mqtt_pub, K_FOREVER);
-
-    do {
-
-        param.message.topic.qos = qos;
-        param.message.topic.topic.utf8 = (uint8_t *) topic;
-        param.message.topic.topic.size = strlen(param.message.topic.topic.utf8);
-        param.message.payload.data = (uint8_t *) data;
-        param.message.payload.len = len;
-        param.message_id = get_next_message_id();
-        param.dup_flag = 0;
-        param.retain_flag = 0;
-
-        code = mqtt_publish(c, &param);
-        if (code != 0) {
-            goto publish_done;
-        }
-
-        if (param.message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) {
-
-            pending_ack_msg_id = param.message_id;
-            msg_ack_pending = true;
-
-            uint32_t start_ticks = k_uptime_get_32();
-
-            do {
-
-                iotc_nrf_mqtt_loop();
-                k_msleep(1);
-
-            } while (msg_ack_pending &&
-                    (k_uptime_get_32() - start_ticks) < (MQTT_PUBACK_TIMEOUT_S * 1000));
-
-            if (!msg_ack_pending) {
-                code = 0;
-                break;
-            }
-
-            if (retry_count > 0) {
-                retry_count--;
-                if (retry_count == 0) {
-                    msg_ack_pending = false;
-                    code = -ETIMEDOUT;
-                }
-            }
-        }
-
-    } while ((param.message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) && (retry_count > 0));
-
-publish_done:
-
-    //mutex unlock
-    sys_mutex_unlock(&mutex_mqtt_pub);
-
-    return code;
+    if (p_msg_id ) {
+        //New message. Force p_msg_id to zero.
+        *p_msg_id = 0;
+    }
+    return nrf_mqtt_publish(c, topic, qos, data, len, p_msg_id);
 }
 
 static void mqtt_evt_handler(struct mqtt_client *const c,
@@ -317,6 +431,7 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
             if (config->status_cb) {
                 config->status_cb(MQTT_DISCONNECTED);
             }
+            msg_queue_clear(true);
             break;
 
         case MQTT_EVT_PUBLISH: {
@@ -351,11 +466,9 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
             }
 
             printk("Packet id: %u acknowledged\n", evt->param.puback.message_id);
-
-            if (msg_ack_pending) {
-                if (pending_ack_msg_id == evt->param.puback.message_id) {
-                    msg_ack_pending = false;
-                }
+            msg_queue_delete(evt->param.puback.message_id);
+            if (config->msg_send_status_cb) {
+                config->msg_send_status_cb(evt->param.puback.message_id, MSG_SEND_SUCCESS);
             }
             break;
 
@@ -429,6 +542,9 @@ bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
         return false;
     }
 
+    //init msg queue
+    msg_queue_init();
+
     fds.fd = -1;
     sync_response = sr;
     config = c;
@@ -457,6 +573,9 @@ bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
 // MQTT will work in while loop
 void iotc_nrf_mqtt_loop(void) {
     int err;
+
+    // process msg queue procedure
+    msg_queue_proc();
 
     //if no FD return.
     if (fds.fd == -1) {
