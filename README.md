@@ -4,6 +4,8 @@ This repository contains IoTConnect nRF SDK and samples intended for use with Av
 
 The sample shows how to make use of the IoTConnect SDK to connect your DK, Thingy:91 or AVT9152-EVB devices to IoTConnect.
 
+To get started quickly, see the [IoTConnect nRF SDK Thingy91 Demo](https://www.youtube.com/watch?v=pdULxj6-R5Y) demo video on YouTube.
+
 #### Software Release Compatibility Matrix
 
 This table shows this repository release and branch compatibility with different nRF Connect SDK (NCS) and Modem firmware versions. 
