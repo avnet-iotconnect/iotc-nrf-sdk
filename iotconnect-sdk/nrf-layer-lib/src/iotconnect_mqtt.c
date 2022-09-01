@@ -434,22 +434,22 @@ bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
     config = c;
 
     if (!client_init()) {
-        return -1;
+        return false;
     }
 
     err = mqtt_connect(&client);
     if (err != 0) {
         printk("ERROR: mqtt_connect %d\n", err);
-        return -2;
+        return false;
     }
 
     err = fds_init(&client);
     if (err != 0) {
         printk("ERROR: fds_init %d\n", err);
-        return -3;
+        return false;
     }
 
-    return 1;
+    return true;
 
 }
 
