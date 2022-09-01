@@ -19,7 +19,7 @@
 #include "led_pwm.h"
 #else
 #define ui_leds_init()
-#define ui_led_set_rgb(a,b,c)
+#define ui_led_set_rgb(a,b,c) (void) (a,b,c)
 #endif
 #include <power/reboot.h>
 #include <dfu/mcuboot.h>

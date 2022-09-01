@@ -24,7 +24,7 @@
 #include "buzzer.h"
 #else
 #define ui_leds_init()
-#define ui_led_set_rgb(a,b,c)
+#define ui_led_set_rgb(a,b,c) (void) (a,b,c)
 #define ui_buzzer_init()
 #endif
 #include "iotconnect.h"
