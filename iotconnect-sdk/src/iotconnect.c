@@ -193,7 +193,11 @@ static void on_iotconnect_status(IotconnectConnectionStatus status) {
     }
 }
 
-
+static void on_msg_send_status(uint32_t msg_id, IotconnectMsgSendStatus status) {
+    if (config.msg_send_status_cb) {
+        config.msg_send_status_cb(msg_id, status);
+    }
+}
 ///////////////////////////////////////////////////////////////////////////////////
 // Get All twin property from C2D
 void iotconnect_sdk_disconnect() {
@@ -202,8 +206,12 @@ void iotconnect_sdk_disconnect() {
     k_msleep(100);
 }
 
-void iotconnect_sdk_send_packet(const char *data) {
-    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, MQTT_QOS_0_AT_MOST_ONCE, data, strlen(data))) {
+// Send MQTT message.
+// p_msg_id points to a 32-bit variable that store the assigned message id of the message
+// being sent.
+void iotconnect_sdk_send_packet(const char *data, uint32_t *p_msg_id) {
+    if (0 != iotc_nrf_mqtt_publish(&client, sync_response->broker.pub_topic, MQTT_QOS_1_AT_LEAST_ONCE, data, strlen(data),
+    ....p_msg_id)) {
         printk("\n\t Device_Attributes_Data Publish failure");
     }
 }
@@ -302,6 +310,7 @@ int iotconnect_sdk_init() {
     mqtt_config.tls_verify = CONFIG_PEER_VERIFY;
     mqtt_config.data_cb = iotc_on_mqtt_data;
     mqtt_config.status_cb = on_iotconnect_status;
+    mqtt_config.msg_send_status_cb = on_msg_send_status;
 
     if (!iotc_nrf_mqtt_init(&mqtt_config, sync_response)) {
         return -8;

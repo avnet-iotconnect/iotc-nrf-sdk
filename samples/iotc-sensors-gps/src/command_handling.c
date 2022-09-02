@@ -17,7 +17,7 @@ void command_status(IotclEventData data, bool status, const char *command_name, 
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, status, message);
     printk("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
     printk("Sent CMD ack: %s\n", ack);
-    iotconnect_sdk_send_packet(ack);
+    iotconnect_sdk_send_packet(ack, NULL);
     free((void *) ack);
 }
 

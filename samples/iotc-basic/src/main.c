@@ -61,6 +61,8 @@ static bool lte_link_up = false;
 static bool connecting_to_iotconnect = false;
 static bool time_updated = false;
 
+static uint32_t ack_pending_msg_id = 0;
+
 #if !defined(CONFIG_NRF_MODEM_LIB_SYS_INIT)
 
 /* Initialize AT communications */
@@ -184,7 +186,7 @@ static void on_ota(IotclEventData data) {
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, success, message);
     if (NULL != ack) {
         printk("Sent OTA ack: %s\n", ack);
-        iotconnect_sdk_send_packet(ack);
+        iotconnect_sdk_send_packet(ack, NULL);
         free((void *) ack);
     }
 }
@@ -198,7 +200,7 @@ static void on_command(IotclEventData data) {
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, false, "Not implemented");
     if (NULL != ack) {
         printk("Sent CMD ack: %s\n", ack);
-        iotconnect_sdk_send_packet(ack);
+        iotconnect_sdk_send_packet(ack, NULL);
         free((void *) ack);
     } else {
         printk("Error while creating the ack JSON");
@@ -222,13 +224,33 @@ static void on_connection_status(IotconnectConnectionStatus status) {
         case MQTT_DISCONNECTED:
             printk("IoTConnect MQTT Disconnected\n");
             ui_led_set_rgb(LED_MAX, 0, 0);
+            ack_pending_msg_id = 0;
             break;
         case MQTT_FAILED:
         default:
             printk("IoTConnect MQTT ERROR\n");
             ui_led_set_rgb(0, LED_MAX, 0);
+            connecting_to_iotconnect = false;
             break;
     }
+}
+
+static void on_msg_send_status(uint32_t msg_id, IotconnectMsgSendStatus status) {
+    switch(status) {
+        case MSG_SEND_SUCCESS:
+            printk("Message sent. (msg id: %d)\n", msg_id);
+            break;
+        case MSG_SEND_TIMEOUT:
+            printk("Message send timeout! (msg id: %d)\n", msg_id);
+            break;
+        case MSG_SEND_FAILED:
+            printk("Message send failed! (msg id: %d)\n", msg_id);
+            break;
+   }
+   // clear ack_pending_msg_id if msg id matched.
+   if (ack_pending_msg_id && (ack_pending_msg_id == msg_id)) {
+       ack_pending_msg_id = 0;
+   }
 }
 
 static void publish_telemetry() {
@@ -246,7 +268,7 @@ static void publish_telemetry() {
     const char *str = iotcl_create_serialized_string(msg, false);
     iotcl_telemetry_destroy(msg);
     printk("Sending: %s\n", str);
-    iotconnect_sdk_send_packet(str);
+    iotconnect_sdk_send_packet(str, &ack_pending_msg_id);
     iotcl_destroy_serialized(str);
 }
 
@@ -515,7 +537,7 @@ static int sdk_run() {
         now = time(NULL);
         if (iotconnect_sdk_is_connected() && now - last_send_time >= CONFIG_TELEMETRY_SEND_INTERVAL_SECS) {
             last_send_time = now;
-            if (!fota_in_progress) {
+            if (!fota_in_progress && !ack_pending_msg_id) {
                 publish_telemetry();
 
             }
@@ -663,6 +685,7 @@ void main(void) {
     config->cmd_cb = on_command;
     config->ota_cb = on_ota;
     config->status_cb = on_connection_status;
+    config->msg_send_status_cb = on_msg_send_status;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
