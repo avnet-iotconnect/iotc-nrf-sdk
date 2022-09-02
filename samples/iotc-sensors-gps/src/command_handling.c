@@ -42,7 +42,7 @@ void process_command(IotclEventData data, char *args) {
             command_status(data, false, cmd, "Missing argument");
             return;
         }
-        int r, g, b;
+        unsigned int r, g, b;
         int num_found = sscanf(arg, "%02x%02x%02x", &r, &g, &b);
         if (3 != num_found) {
             command_status(data, false, cmd, "Argument format error!");

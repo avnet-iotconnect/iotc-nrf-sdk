@@ -43,8 +43,8 @@ static int parse_response(IotconnectNrfHttpResponse *response,
     const size_t payload_len = recv_buff_len - header_size - 4; // 4 = CRLF
     char *data_start = header_end + 4;
     if (strstr(response->header, "Transfer-Encoding: chunked")) {
-        int chunk_size = 0;
-        int data_size = 0;
+        unsigned int chunk_size = 0;
+        unsigned int data_size = 0;
         do {
             if (1 != sscanf(data_start, "%x", &chunk_size)) {
                 printk("parse_response: Cannot scan chunk header size in string %s\n", data_start);
@@ -64,7 +64,7 @@ static int parse_response(IotconnectNrfHttpResponse *response,
                 );
                 return -4;
             }
-            printk("Chunk size %d\n", chunk_size);
+            printk("Chunk size %u\n", chunk_size);
             data_start = strstr(data_start, "\r\n");
             if (!data_start) {
                 printk("parse_response: Cannot find newline after chunk header\n");
