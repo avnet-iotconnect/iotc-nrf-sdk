@@ -29,14 +29,18 @@ typedef enum {
 
 typedef void (*IotConnectStatusCallback)(IotconnectConnectionStatus data);
 
+
+
 typedef struct {
     char *env;    // Environment name. Contact your representative for details.
     char *cpid;   // Settings -> Company Profile.
     char *duid;   // Name of the device.
     IotclOtaCallback ota_cb; // callback for OTA events.
     IotclCommandCallback cmd_cb; // callback for command events.
+    IotcltwinrecivCallback twin_msg_rciv;
     IotclMessageCallback msg_cb; // callback for ALL messages, including the specific ones like cmd or ota callback.
     IotConnectStatusCallback status_cb; // callback for connection status
+
 } IotconnectClientConfig;
 
 

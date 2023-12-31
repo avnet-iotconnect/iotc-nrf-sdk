@@ -325,11 +325,19 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
             printk("MQTT PUBLISH result=%d len=%d\n", evt->result, p->message.payload.len);
             err = get_event_payload(c, p->message.payload.len);
             if (err >= 0) {
-
-                if (config->data_cb) {
-                    config->data_cb(payload_buf, p->message.payload.len, p->message.topic.topic.utf8);
+                if(! strncmp(p->message.topic.topic.utf8,"$iothub/twin/res/",17)){
+                    if (config->twin_cb) {
+                        config->twin_cb(payload_buf, p->message.payload.len, p->message.topic.topic.utf8);
+                    } else {
+                        printk("Error: no mqtt twin_cb configured\n");
+                    }
+                } else{
+                    if (config->data_cb) {
+                        config->data_cb(payload_buf, p->message.payload.len, p->message.topic.topic.utf8);
                 } else {
-                    printk("Error: no mqtt data_cb configured\n");
+                        printk("Error: no mqtt data_cb configured\n");
+                }
+
                 }
 
             } else {
@@ -434,22 +442,22 @@ bool iotc_nrf_mqtt_init(IotconnectMqttConfig *c, IotclSyncResponse *sr) {
     config = c;
 
     if (!client_init()) {
-        return false;
+        return -1;
     }
 
     err = mqtt_connect(&client);
     if (err != 0) {
         printk("ERROR: mqtt_connect %d\n", err);
-        return false;
+        return -2;
     }
 
     err = fds_init(&client);
     if (err != 0) {
         printk("ERROR: fds_init %d\n", err);
-        return false;
+        return -3;
     }
 
-    return true;
+    return 1;
 
 }
 

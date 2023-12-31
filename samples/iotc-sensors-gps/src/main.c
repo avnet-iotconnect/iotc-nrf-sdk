@@ -24,7 +24,7 @@
 #include "buzzer.h"
 #else
 #define ui_leds_init()
-#define ui_led_set_rgb(a,b,c) (void) (a,b,c)
+#define ui_led_set_rgb(a,b,c)
 #define ui_buzzer_init()
 #endif
 #include "iotconnect.h"
@@ -212,6 +212,26 @@ static void on_ota(IotclEventData data) {
     }
 }
 
+static void TwinUpdateCallback(IotclEventData payload)
+{
+
+    TwinStrings* result = getTwinStrings(payload);
+    
+    /*
+     Type    : Public Method "updateTwin()"
+     Usage   : Upate the twin reported property
+     Output  : 
+     Input   : "key" and "value" as below
+               // String key = "<< Desired property key >>"; // Desired proeprty key received from Twin callback message
+               // String value = "<< Desired Property value >>"; // Value of respective desired property
+    */    
+     UpdateTwin(result->key,result->value);
+
+    // Don't forget to free the allocated memory
+    free(result);
+    
+}
+
 static void on_command(IotclEventData data) {
     char *command = iotcl_clone_command(data);
     if (NULL != command) {
@@ -222,6 +242,7 @@ static void on_command(IotclEventData data) {
         command_status(data, false, "?", "Internal error");
     }
 }
+
 
 static void on_connection_status(IotconnectConnectionStatus status) {
     // Add your own status handling
@@ -917,6 +938,8 @@ void main(void) {
     config->cmd_cb = on_command;
     config->ota_cb = on_ota;
     config->status_cb = on_connection_status;
+    config->twin_msg_rciv = TwinUpdateCallback;
+    
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
