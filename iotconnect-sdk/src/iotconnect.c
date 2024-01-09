@@ -37,6 +37,12 @@ static IotconnectMqttConfig mqtt_config = {0};
 static char send_buf[MAXLINE + 1];
 static bool sdk_initialized = false;
 
+char* const  twinPropertyPubTopic ="$iothub/twin/PATCH/properties/reported/?$rid=1";
+char* const  twinPropertySubTopic ="$iothub/twin/PATCH/properties/desired/#";
+char* const  twinResponsePubTopic ="$iothub/twin/GET/?$rid=0";
+char* const  twinResponseSubTopic ="$iothub/twin/res/#";
+
+
 static void dump_response(const char *message, IotconnectNrfHttpResponse *response) {
     printk("%s", message);
     if (response->raw_response) {
@@ -182,7 +188,20 @@ void iotc_on_mqtt_data(const uint8_t *data, size_t len, const char *topic) {
     str[len] = 0;
     printk("event>>> %s\n", str);
     if (!iotcl_process_event(str)) {
-        printk("Error encountered while processing %s\n", str);
+        printk("Error encountered while processing command ::%s\n", str);
+    }
+    free(str);
+}
+
+void iotc_twin_mqtt_data(const uint8_t *data, size_t len, const char *topic) {
+    (void) topic; // ignore topic for now
+    char *str = malloc(len + 1);
+    char *SMS;
+    memcpy(str, data, len);
+    str[len] = 0;
+    printk("event>>> %s\n", str);
+    if (!iotcl_process_twin_event(str)) {
+        printk("Error encountered while processing Twin ::%s\n", str);
     }
     free(str);
 }
@@ -207,6 +226,29 @@ void iotconnect_sdk_send_packet(const char *data) {
         printk("\n\t Device_Attributes_Data Publish failure");
     }
 }
+
+void iotconnect_sdk_send_twin_update_packet(const char *data) {
+    if (0 != iotc_nrf_mqtt_publish(&client, twinPropertyPubTopi, MQTT_QOS_0_AT_MOST_ONCE, data, strlen(data))) {
+        printk("\n\t Device_twin_Data Publish failure");
+    }
+}
+
+//This will iotconnect_update_twin property to IoTConnect
+void iotconnect_update_twin(char *key,char *value){
+    char *Twin_Json_Data;
+    cJSON *root;
+    root  = cJSON_CreateObject();
+
+    cJSON_AddStringToObject(root, key, value);
+    Twin_Json_Data = cJSON_PrintUnformatted(root);
+ 
+    printk("json format of Twin_Json_Data = %s",Twin_Json_Data);
+    iotconnect_sdk_send_twin_update_packet(Twin_Json_Data);
+
+    cJSON_Delete(root);
+    free(Twin_Json_Data);
+}
+
 
 static void on_message_intercept(IotclEventData data, IotConnectEventType type) {
     switch (type) {
@@ -289,6 +331,7 @@ int iotconnect_sdk_init() {
         lib_config.telemetry.dtg = sync_response->dtg;;
         lib_config.event_functions.ota_cb = config.ota_cb;
         lib_config.event_functions.cmd_cb = config.cmd_cb;
+        lib_config.event_functions.twin_msg_cb = config.twin_msg_cb;
     
         // intercept internal processing and forward to client
         lib_config.event_functions.msg_cb = on_message_intercept;
@@ -301,6 +344,7 @@ int iotconnect_sdk_init() {
     }
     mqtt_config.tls_verify = CONFIG_PEER_VERIFY;
     mqtt_config.data_cb = iotc_on_mqtt_data;
+    mqtt_config.twin_cb = iotc_twin_mqtt_data;
     mqtt_config.status_cb = on_iotconnect_status;
 
     if (!iotc_nrf_mqtt_init(&mqtt_config, sync_response)) {

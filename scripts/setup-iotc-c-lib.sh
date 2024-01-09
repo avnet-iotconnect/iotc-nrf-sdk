@@ -2,6 +2,6 @@
 
 set -e
 
-git clone --depth 1 --branch v2.0.0 git://github.com/Avnet/iotc-c-lib.git
+git clone --depth 1 --branch iotc-c-lib-patch https://github.com/avnet-iotconnect/iotc-c-lib.git
 test -d iotc-c-lib
 cp -f common/iotc-c-lib-overlay/CMakeLists.txt iotc-c-lib/

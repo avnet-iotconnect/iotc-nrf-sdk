@@ -18,10 +18,13 @@ extern "C" {
 
 typedef void (*IotconnectMqttOnDataCallback)(const uint8_t *data, size_t len, const char *topic);
 
+typedef void (*IotconnectMqttTwinDataCallback)(const uint8_t *data, size_t len, const char *topic);
+
 typedef struct {
     int tls_verify; // NONE = 0, OPTIONAL = 1, REQUIRED = 2
     const char *env; // Environment name. Contact your representative for details. Same as telemetry config.
     IotconnectMqttOnDataCallback data_cb; // callback for OTA events.
+    IotconnectMqttTwinDataCallback twin_cb;//callback twin event.
     IotConnectStatusCallback status_cb; // callback for command events.
 } IotconnectMqttConfig;
 

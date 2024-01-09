@@ -189,6 +189,28 @@ static void on_ota(IotclEventData data) {
     }
 }
 
+static void on_twin_command(IotclEventData payload)
+{
+
+    TwinStrings *result = iotcl_get_twin_key_and_value(payload);
+    
+    /*
+     Type    : Public Method "iotconnect_update_twin()"
+     Usage   : Upate the twin reported property
+     Output  : 
+     Input   : "key" and "value" as below
+               // String key = "<< Desired property key >>"; // Desired proeprty key received from Twin callback message
+               // String value = "<< Desired Property value >>"; // Value of respective desired property
+    */    
+     iotconnect_update_twin(result->key,result->value);
+
+    // Don't forget to free the allocated memory
+    free(result);
+    
+}
+
+
+
 static void on_command(IotclEventData data) {
     const char *command = iotcl_clone_command(data);
     if (NULL != command) {
@@ -663,6 +685,7 @@ void main(void) {
     config->cmd_cb = on_command;
     config->ota_cb = on_ota;
     config->status_cb = on_connection_status;
+    config->twin_msg_cb = on_twin_command;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
