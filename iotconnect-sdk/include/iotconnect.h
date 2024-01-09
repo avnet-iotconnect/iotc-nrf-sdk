@@ -37,7 +37,7 @@ typedef struct {
     char *duid;   // Name of the device.
     IotclOtaCallback ota_cb; // callback for OTA events.
     IotclCommandCallback cmd_cb; // callback for command events.
-    IotcltwinrecivCallback twin_msg_rciv;
+    IotcltwinrecivCallback twin_msg_cb;
     IotclMessageCallback msg_cb; // callback for ALL messages, including the specific ones like cmd or ota callback.
     IotConnectStatusCallback status_cb; // callback for connection status
 

@@ -331,12 +331,12 @@ static void mqtt_evt_handler(struct mqtt_client *const c,
                     } else {
                         printk("Error: no mqtt twin_cb configured\n");
                     }
-                } else{
+                } else {
                     if (config->data_cb) {
                         config->data_cb(payload_buf, p->message.payload.len, p->message.topic.topic.utf8);
-                } else {
+                    } else {
                         printk("Error: no mqtt data_cb configured\n");
-                }
+                    }
 
                 }
 

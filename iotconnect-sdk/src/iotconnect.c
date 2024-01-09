@@ -200,7 +200,7 @@ void iotc_twin_mqtt_data(const uint8_t *data, size_t len, const char *topic) {
     memcpy(str, data, len);
     str[len] = 0;
     printk("event>>> %s\n", str);
-    if (!twin_event(str)) {
+    if (!iotcl_process_twin_event(str)) {
         printk("Error encountered while processing Twin ::%s\n", str);
     }
     free(str);
@@ -233,8 +233,8 @@ void iotconnect_sdk_send_twin_update_packet(const char *data) {
     }
 }
 
-//This will UpdateTwin property to IoTConnect
-void UpdateTwin(char *key,char *value){
+//This will iotconnect_update_twin property to IoTConnect
+void iotconnect_update_twin(char *key,char *value){
     char *Twin_Json_Data;
     cJSON *root;
     root  = cJSON_CreateObject();
@@ -331,7 +331,7 @@ int iotconnect_sdk_init() {
         lib_config.telemetry.dtg = sync_response->dtg;;
         lib_config.event_functions.ota_cb = config.ota_cb;
         lib_config.event_functions.cmd_cb = config.cmd_cb;
-        lib_config.event_functions.twin_msg_rciv = config.twin_msg_rciv;
+        lib_config.event_functions.twin_msg_cb = config.twin_msg_cb;
     
         // intercept internal processing and forward to client
         lib_config.event_functions.msg_cb = on_message_intercept;
